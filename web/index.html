@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fotoro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: #0f0f0f;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+        }
+
+        header {
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #222;
+            position: sticky;
+            top: 0;
+            background: #0f0f0f;
+            z-index: 10;
+        }
+
+        h1 { font-size: 20px; font-weight: 600; }
+
+        .upload-btn {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .upload-btn:hover { background: #ddd; }
+
+        .stats {
+            padding: 12px 24px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        /* Masonry-style grid */
+        .gallery {
+            padding: 16px;
+            columns: 2;
+            column-gap: 8px;
+        }
+
+        @media (min-width: 600px)  { .gallery { columns: 3; } }
+        @media (min-width: 900px)  { .gallery { columns: 4; } }
+        @media (min-width: 1200px) { .gallery { columns: 5; } }
+
+        .photo-card {
+            break-inside: avoid;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+            background: #1a1a1a;
+        }
+
+        .photo-card img {
+            width: 100%;
+            display: block;
+            transition: opacity 0.2s;
+        }
+
+        .photo-card img.loading { opacity: 0; }
+        .photo-card img.loaded  { opacity: 1; }
+
+        .photo-card:hover .delete-btn { opacity: 1; }
+
+        .delete-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(0,0,0,0.7);
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-size: 14px;
+        }
+
+        /* Lightbox */
+        .lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox.open { display: flex; }
+
+        .lightbox img {
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        /* Upload progress */
+        .upload-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .upload-status.visible { display: block; }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #444;
+        }
+
+        .load-more {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 24px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .load-more:hover { background: #222; }
+        .load-more:disabled { opacity: 0.4; cursor: default; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>📷 Fotoro</h1>
+    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+        + Upload
+    </button>
+    <input type="file" id="fileInput" accept="image/*" multiple 
+           style="display:none" onchange="handleUpload(this.files)">
+</header>
+
+<div class="stats" id="stats">Loading...</div>
+
+<div class="gallery" id="gallery"></div>
+
+<div class="empty-state" id="emptyState" style="display:none">
+    <div style="font-size:48px">📷</div>
+    <p style="margin-top:12px">No photos yet. Upload some!</p>
+</div>
+
+<button class="load-more" id="loadMore" 
+        style="display:none" onclick="loadPhotos()">
+    Load more
+</button>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightboxImg" src="" alt="">
+</div>
+
+<!-- Upload status toast -->
+<div class="upload-status" id="uploadStatus"></div>
+
+<script>
+    const API = 'http://localhost:8080'
+    let currentPage = 1
+    let totalPages = 1
+    let isLoading = false
+
+    // Load photos on page load
+    window.onload = () => loadPhotos(true)
+
+    async function loadPhotos(reset = false) {
+        if (isLoading) return
+        if (!reset && currentPage >= totalPages) return
+
+        isLoading = true
+        if (reset) {
+            currentPage = 1
+            document.getElementById('gallery').innerHTML = ''
+        }
+
+        try {
+            const res = await fetch(`${API}/photos?page=${currentPage}&limit=20`)
+            const data = await res.json()
+
+            totalPages = data.total_pages || 1
+
+            // Update stats
+            document.getElementById('stats').textContent =
+                `${data.total} photo${data.total !== 1 ? 's' : ''}`
+
+            // Show empty state
+            if (data.total === 0) {
+                document.getElementById('emptyState').style.display = 'block'
+                document.getElementById('loadMore').style.display = 'none'
+                return
+            }
+
+            document.getElementById('emptyState').style.display = 'none'
+
+            // Render photo cards
+            const gallery = document.getElementById('gallery')
+            data.photos.forEach(photo => {
+                gallery.appendChild(createPhotoCard(photo))
+            })
+
+            // Show/hide load more button
+            const loadMore = document.getElementById('loadMore')
+            loadMore.style.display = currentPage < totalPages ? 'block' : 'none'
+            currentPage++
+
+        } catch (err) {
+            console.error('Failed to load photos:', err)
+        } finally {
+            isLoading = false
+        }
+    }
+
+    function createPhotoCard(photo) {
+        const card = document.createElement('div')
+        card.className = 'photo-card'
+        card.dataset.id = photo.id
+
+        const img = document.createElement('img')
+        img.className = 'loading'
+        img.src = `${API}/thumbnails/${photo.id}`
+
+        // Lazy loading — image fades in when loaded
+        img.onload = () => {
+            img.classList.remove('loading')
+            img.classList.add('loaded')
+        }
+
+        img.onclick = () => openLightbox(photo.id)
+
+        const deleteBtn = document.createElement('button')
+        deleteBtn.className = 'delete-btn'
+        deleteBtn.textContent = '✕'
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation()
+            deletePhoto(photo.id)
+        }
+
+        card.appendChild(img)
+        card.appendChild(deleteBtn)
+        return card
+    }
+
+    function openLightbox(id) {
+        const lightbox = document.getElementById('lightbox')
+        const img = document.getElementById('lightboxImg')
+        img.src = `${API}/photos/${id}`
+        lightbox.classList.add('open')
+    }
+
+    function closeLightbox() {
+        document.getElementById('lightbox').classList.remove('open')
+        document.getElementById('lightboxImg').src = ''
+    }
+
+    // Close lightbox with Escape key
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeLightbox()
+    })
+
+    async function deletePhoto(id) {
+        if (!confirm('Delete this photo?')) return
+
+        try {
+            await fetch(`${API}/photos/${id}`, { method: 'DELETE' })
+            // Remove card from UI instantly
+            document.querySelector(`[data-id="${id}"]`)?.remove()
+            // Reload to update count
+            loadPhotos(true)
+        } catch (err) {
+            alert('Could not delete photo')
+        }
+    }
+
+    async function handleUpload(files) {
+        const status = document.getElementById('uploadStatus')
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i]
+            status.textContent = `Uploading ${i + 1}/${files.length}: ${file.name}`
+            status.classList.add('visible')
+
+            try {
+                const formData = new FormData()
+                formData.append('file', file)
+
+                const res = await fetch(`${API}/upload`, {
+                    method: 'POST',
+                    body: formData
+                })
+
+                if (!res.ok) throw new Error('Upload failed')
+
+            } catch (err) {
+                status.textContent = `Failed: ${file.name}`
+                await sleep(2000)
+            }
+        }
+
+        status.textContent = `✓ Done — ${files.length} photo${files.length > 1 ? 's' : ''} uploaded`
+        await sleep(2000)
+        status.classList.remove('visible')
+
+        // Reload gallery
+        loadPhotos(true)
+    }
+
+    const sleep = ms => new Promise(r => setTimeout(r, ms))
+</script>
+
+</body>
+</html>
