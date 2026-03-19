@@ -12,8 +12,14 @@ type Storage struct {
 }
 
 func New(base string) (*Storage, error) {
-	photosDir := filepath.Join(base, "photos")
-	thumbsDir := filepath.Join(base, "thumbnails")
+	// Convert to absolute path — fixes issues with relative paths
+	absBase, err := filepath.Abs(base)
+	if err != nil {
+		return nil, err
+	}
+
+	photosDir := filepath.Join(absBase, "photos")
+	thumbsDir := filepath.Join(absBase, "thumbnails")
 
 	if err := os.MkdirAll(photosDir, 0755); err != nil {
 		return nil, err
