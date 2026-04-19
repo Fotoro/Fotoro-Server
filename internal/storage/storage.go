@@ -12,7 +12,6 @@ type Storage struct {
 }
 
 func New(base string) (*Storage, error) {
-	// Convert to absolute path — fixes issues with relative paths
 	absBase, err := filepath.Abs(base)
 	if err != nil {
 		return nil, err
@@ -35,8 +34,12 @@ func New(base string) (*Storage, error) {
 }
 
 func (s *Storage) PhotoPath(id, filename string) string {
-	ext := filepath.Ext(filename)
-	return filepath.Join(s.PhotosDir, id+ext)
+    ext := filepath.Ext(filename)
+    // Use first two chars as subdirectory: "ab/cdef..."
+    subdir := id[:2]
+    dir := filepath.Join(s.PhotosDir, subdir)
+    os.MkdirAll(dir, 0755) // ensure exists
+    return filepath.Join(dir, id+ext)
 }
 
 func (s *Storage) ThumbnailPath(id string) string {
@@ -44,15 +47,13 @@ func (s *Storage) ThumbnailPath(id string) string {
 }
 
 func (s *Storage) SavePhoto(id, filename string, src io.Reader) (int64, error) {
-	path := s.PhotoPath(id, filename)
-
-	dst, err := os.Create(path)
-	if err != nil {
-		return 0, err
-	}
-	defer dst.Close()
-
-	return io.Copy(dst, src)
+    path := s.PhotoPath(id, filename)
+    dst, err := os.Create(path)
+    if err != nil {
+        return 0, err
+    }
+    defer dst.Close()
+    return io.Copy(dst, src)
 }
 
 func (s *Storage) DeletePhoto(id, filename string) error {
