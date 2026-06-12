@@ -10,7 +10,7 @@
     "lint": "npm --prefix site run lint",
     "typecheck": "npm --prefix site run typecheck",
     "install:site": "npm --prefix site install",
-    "postinstall": "npm --prefix site install --no-audit --no-fund",
+    "postinstall": "if [ -z \"$CI\" ]; then husky install; fi",
     "server": "go run .",
     "server:build": "go build -o bin/fotoro ."
   }
