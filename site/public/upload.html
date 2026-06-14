@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fotoro Upload</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { background: #07080e; color: #b8bdd0; font-family: Inter, system-ui, sans-serif; max-width: 480px; margin: 48px auto; padding: 20px; }
+    h2 { font-weight: 500; color: #e0e4ff; margin-bottom: 24px; }
+    label { display: block; font-size: 12px; color: #6a7085; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+    input, button { width: 100%; padding: 12px 14px; margin-bottom: 16px; background: #0b0d16; border: 1px solid #181c2c; color: #dde0ef; border-radius: 10px; font-size: 14px; }
+    input:focus { outline: none; border-color: #2a3888; }
+    button { background: #2a3888; border: none; font-weight: 500; cursor: pointer; margin-top: 8px; }
+    button:hover { background: #3a48a8; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #status { margin-top: 16px; font-size: 13px; color: #6a7085; line-height: 1.5; }
+    #status.ok { color: #28c840; }
+    #status.err { color: #ff5f57; }
+    .hint { font-size: 12px; color: #3c4058; margin-top: 24px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <h2>Upload to Fotoro</h2>
+  
+  <label>Tailscale IP</label>
+  <input type="text" id="ip" placeholder="100.x.x.x">
+  
+  <label>API Key</label>
+  <input type="text" id="key" placeholder="Paste your key from desktop app">
+  
+  <label>Photo</label>
+  <input type="file" id="file" accept="image/*">
+  
+  <button onclick="upload()" id="btn">Upload</button>
+  
+  <div id="status"></div>
+  
+  <div class="hint">
+    Your phone must be connected to Tailscale.<br>
+    Get the IP from the desktop app: <code>tailscale ip -4</code><br>
+    Get the key from the desktop app: <code>fotoro server</code> then visit <code>/api/auth/register</code>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    $('ip').value = localStorage.getItem('fotoro_ip') || '';
+    $('key').value = localStorage.getItem('fotoro_key') || '';
+
+    async function upload() {
+      const ip = $('ip').value.trim();
+      const key = $('key').value.trim();
+      const file = $('file').files[0];
+      const status = $('status');
+      const btn = $('btn');
+
+      if (!ip || !key || !file) {
+        status.className = 'err';
+        status.innerText = 'Fill all fields and select a photo';
+        return;
+      }
+
+      localStorage.setItem('fotoro_ip', ip);
+      localStorage.setItem('fotoro_key', key);
+
+      const url = `http://${ip}:8765/api/ingest`;
+      const form = new FormData();
+      form.append('image', file);
+
+      btn.disabled = true;
+      status.className = '';
+      status.innerText = 'Uploading…';
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + key },
+          body: form
+        });
+        const data = await res.json();
+        if (res.ok) {
+          status.className = 'ok';
+          status.innerText = `Uploaded successfully\nHash: ${data.hash}\nCaption: ${data.caption || 'N/A'}`;
+        } else {
+          status.className = 'err';
+          status.innerText = `Error: ${data.error || res.statusText}`;
+        }
+      } catch (e) {
+        status.className = 'err';
+        status.innerText = 'Network error: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
