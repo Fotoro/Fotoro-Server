@@ -9,15 +9,7 @@ import { fetchPhotosPage } from "@/lib/fotoro-server-data";
 import { photoUrl, searchPhotos, type GalleryPhoto } from "@/lib/fotoro-local";
 import { useServerData } from "@/components/dashboard/server-data-provider";
 
-const PAGE_SIZE = 60;
-
-function thumbProxyPath(photo: GalleryPhoto): string {
-  const base = photo.thumbnail.startsWith("/")
-    ? photo.thumbnail
-    : `/thumb/${photo.id}?size=medium`;
-  const path = base.replace(/^\//, "");
-  return `/api/fotoro/${path}`;
-}
+const PAGE_SIZE = 50;
 
 function LazyThumb({ photo }: { photo: GalleryPhoto }) {
   const ref = React.useRef<HTMLDivElement>(null);
@@ -30,7 +22,7 @@ function LazyThumb({ photo }: { photo: GalleryPhoto }) {
       (entries) => {
         if (entries[0]?.isIntersecting) setVisible(true);
       },
-      { rootMargin: "320px" }
+      { rootMargin: "400px" }
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -41,7 +33,7 @@ function LazyThumb({ photo }: { photo: GalleryPhoto }) {
       {visible ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={thumbProxyPath(photo)}
+          src={photo.thumbnail}
           alt=""
           className="size-full object-cover"
           loading="lazy"
@@ -59,22 +51,28 @@ export function PhotoGallery() {
   const [page, setPage] = React.useState(1);
   const [loading, setLoading] = React.useState(true);
   const [loadingMore, setLoadingMore] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [searching, setSearching] = React.useState(false);
   const [selected, setSelected] = React.useState<GalleryPhoto | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const fetchingRef = React.useRef(false);
 
   const loadPage = React.useCallback(
     async (p: number, append: boolean) => {
-      if (!token) return;
+      if (!token || fetchingRef.current) return;
+      fetchingRef.current = true;
       if (append) setLoadingMore(true);
       else setLoading(true);
+      setError(null);
       try {
         const data = await fetchPhotosPage(token, p, PAGE_SIZE);
         setTotal(data.total);
         setPage(data.page);
         setPhotos((prev) => (append ? [...prev, ...data.photos] : data.photos));
-      } catch {
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to load photos";
+        setError(msg);
         if (!append) {
           setPhotos([]);
           setTotal(0);
@@ -82,6 +80,7 @@ export function PhotoGallery() {
       } finally {
         setLoading(false);
         setLoadingMore(false);
+        fetchingRef.current = false;
       }
     },
     [token]
@@ -89,22 +88,24 @@ export function PhotoGallery() {
 
   React.useEffect(() => {
     if (token) void loadPage(1, false);
-  }, [token, loadPage]);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   React.useEffect(() => {
     const el = scrollRef.current;
-    if (!el || loading || loadingMore) return;
+    if (!el || loading || loadingMore || query) return;
 
     function onScroll() {
-      if (!el) return;
-      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 400;
-      if (nearBottom && photos.length < total && !loadingMore) {
+      if (!el || fetchingRef.current) return;
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 320;
+      const hasMore = photos.length > 0 && photos.length < total;
+      const pageFull = photos.length > 0 && photos.length % PAGE_SIZE === 0;
+      if (nearBottom && hasMore && pageFull) {
         void loadPage(page + 1, true);
       }
     }
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
-  }, [photos.length, total, page, loading, loadingMore, loadPage]);
+  }, [photos.length, total, page, loading, loadingMore, query, loadPage]);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -114,12 +115,14 @@ export function PhotoGallery() {
       return;
     }
     setSearching(true);
+    setError(null);
     try {
-      const results = await searchPhotos(null, token, query.trim(), 120);
+      const results = await searchPhotos(null, token, query.trim());
       setPhotos(results);
       setTotal(results.length);
       setPage(1);
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Search failed");
       setPhotos([]);
       setTotal(0);
     } finally {
@@ -159,6 +162,12 @@ export function PhotoGallery() {
         ) : null}
       </form>
 
+      {error ? (
+        <p className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
+          {error}
+        </p>
+      ) : null}
+
       <div className="min-h-0 flex-1 rounded-xl border border-border bg-card/40 ring-soft">
         <div
           ref={scrollRef}
@@ -172,7 +181,9 @@ export function PhotoGallery() {
           ) : photos.length === 0 ? (
             <div className="flex h-full min-h-[240px] flex-col items-center justify-center text-center">
               <ImageIcon className="mb-3 size-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">No photos indexed yet.</p>
+              <p className="text-sm text-muted-foreground">
+                {error ? "Could not reach your server." : "No photos indexed yet."}
+              </p>
             </div>
           ) : (
             <>
@@ -223,12 +234,7 @@ export function PhotoGallery() {
                   {selected.caption?.trim() || "No description"}
                 </p>
                 {selected.category ? (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {selected.category}
-                    {selected.taken_at
-                      ? ` · ${new Date(selected.taken_at).toLocaleString()}`
-                      : ""}
-                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{selected.category}</p>
                 ) : null}
               </div>
             </motion.div>

@@ -162,14 +162,14 @@ export async function GET(request: NextRequest) {
     if (safe) {
       try {
         const probeRes = await fetch(
-          new URL("/api/fotoro/status", request.url).toString(),
+          new URL("/api/fotoro/api/stats", request.url).toString(),
           {
             headers: { Authorization: `Bearer ${token}` },
             signal: AbortSignal.timeout(12000),
           }
         );
         const probeData = await probeRes.json().catch(() => ({}));
-        safe.live = probeRes.ok && (probeData as { status?: string }).status === "online";
+        safe.live = probeRes.ok && typeof (probeData as { total?: number }).total === "number";
         if (!safe.live) {
           safe.connect_error =
             (probeData as { error?: string }).error ??

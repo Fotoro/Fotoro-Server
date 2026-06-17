@@ -1,9 +1,13 @@
 /**
  * Talks to your local Fotoro server via Vercel proxy (/api/fotoro/*).
- * Your Supabase login token is forwarded — no extra secrets needed.
+ * Uses the same /api/* routes as the Qt desktop (main.cpp).
  */
 
-import { fetchPhotosPage } from "@/lib/fotoro-server-data";
+import {
+  fetchPhotosPage,
+  fullImageProxyUrl,
+  searchPhotosApi,
+} from "@/lib/fotoro-server-data";
 
 export type ConnectivityState = "checking" | "online" | "offline" | "syncing";
 
@@ -13,13 +17,6 @@ export interface GalleryPhoto {
   category: string;
   taken_at?: string;
   thumbnail: string;
-}
-
-export interface ServerStatus {
-  status: string;
-  photos: number;
-  server: string;
-  timestamp?: string;
 }
 
 export interface NodePublic {
@@ -53,12 +50,13 @@ async function proxyFetch(
   });
 }
 
+/** Online when /api/stats responds — same probe desktop uses. */
 export async function checkServerStatus(
   _baseUrl: string | null,
   supabaseToken: string
 ): Promise<{ state: ConnectivityState; error?: string }> {
   try {
-    const res = await proxyFetch("status", supabaseToken, {
+    const res = await proxyFetch("api/stats", supabaseToken, {
       signal: AbortSignal.timeout(12000),
     });
     const data = await res.json().catch(() => ({}));
@@ -68,11 +66,9 @@ export async function checkServerStatus(
         error: (data as { error?: string }).error ?? `Server returned ${res.status}`,
       };
     }
-    const status = data as ServerStatus;
-    if (status.status === "syncing") return { state: "syncing" };
-    return status.status === "online"
-      ? { state: "online" }
-      : { state: "offline", error: "Server status is not online" };
+    const total = (data as { total?: number }).total;
+    if (total != null && total >= 0) return { state: "online" };
+    return { state: "online" };
   } catch (err) {
     return {
       state: "offline",
@@ -85,7 +81,7 @@ export async function fetchPhotos(
   _baseUrl: string | null,
   supabaseToken: string,
   page = 1,
-  limit = 60
+  limit = 50
 ): Promise<GalleryPhoto[]> {
   const data = await fetchPhotosPage(supabaseToken, page, limit);
   return data.photos;
@@ -95,53 +91,15 @@ export async function searchPhotos(
   _baseUrl: string | null,
   supabaseToken: string,
   query: string,
-  limit = 48
+  _limit = 50
 ): Promise<GalleryPhoto[]> {
-  const res = await proxyFetch("search", supabaseToken, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ q: query, limit }),
-    signal: AbortSignal.timeout(20000),
-  });
-  if (!res.ok) {
-    throw new Error(`Search failed (${res.status})`);
-  }
-  const data = await res.json();
-  return ((data.results ?? []) as Array<GalleryPhoto & { id: string }>).map(
-    (r) => ({
-      id: r.id,
-      caption: r.caption,
-      category: r.category,
-      thumbnail: r.thumbnail,
-    })
-  );
+  return searchPhotosApi(supabaseToken, query);
 }
 
 export function thumbUrl(_baseUrl: string | null, photo: GalleryPhoto): string {
-  let path = photo.thumbnail.startsWith("/")
-    ? photo.thumbnail
-    : `/thumb/${photo.id}`;
-  if (!path.includes("size=")) {
-    path += (path.includes("?") ? "&" : "?") + "size=medium";
-  }
-  return `/api/fotoro${path}`;
+  return photo.thumbnail;
 }
 
 export function photoUrl(_baseUrl: string | null, id: string): string {
-  return `/api/fotoro/photo/${id}`;
-}
-
-export async function fetchThumb(
-  _baseUrl: string | null,
-  supabaseToken: string,
-  photo: GalleryPhoto
-): Promise<string> {
-  const res = await proxyFetch(
-    thumbUrl(null, photo).replace("/api/fotoro/", ""),
-    supabaseToken,
-    { signal: AbortSignal.timeout(15000) }
-  );
-  if (!res.ok) throw new Error("Thumbnail load failed");
-  const blob = await res.blob();
-  return URL.createObjectURL(blob);
+  return fullImageProxyUrl(id);
 }
