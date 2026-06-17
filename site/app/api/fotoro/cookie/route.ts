@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySupabaseToken } from "@/lib/auth-verify";
-
-export const FOTORO_PROXY_COOKIE = "fotoro_proxy_token";
+import { FOTORO_PROXY_COOKIE } from "@/lib/fotoro-proxy-cookie";
 
 export async function POST(request: NextRequest) {
   const auth = request.headers.get("authorization");

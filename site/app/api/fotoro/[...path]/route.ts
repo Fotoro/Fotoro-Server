@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifySupabaseToken } from "@/lib/auth-verify";
 import { getNodeBaseUrl } from "@/lib/fotoro-url";
+import { FOTORO_PROXY_COOKIE } from "@/lib/fotoro-proxy-cookie";
 
 async function getUserNodeBaseUrl(userId: string) {
   const supabase = createAdminClient();
@@ -109,7 +110,7 @@ async function handleProxy(
     let bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : "";
 
     if (!bearer && request.method === "GET") {
-      bearer = request.cookies.get("fotoro_proxy_token")?.value ?? "";
+      bearer = request.cookies.get(FOTORO_PROXY_COOKIE)?.value ?? "";
     }
 
     if (!bearer) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifySupabaseToken } from "@/lib/auth-verify";
-import { getNodeBaseUrl, normalizeFotoroServerUrl } from "@/lib/fotoro-url";
+import { normalizeFotoroServerUrl } from "@/lib/fotoro-url";
 
 /** Never expose raw Tailscale IP to the browser — funnel URL only. */
 function sanitizeNodeForClient(node: Record<string, unknown> | null) {
