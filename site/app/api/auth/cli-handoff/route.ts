@@ -9,8 +9,8 @@ export async function POST(req: NextRequest) {
     if (!state || typeof state !== "string") {
       return NextResponse.json({ error: "Missing state" }, { status: 400 });
     }
-    if (!access_token || !refresh_token) {
-      return NextResponse.json({ error: "Missing tokens" }, { status: 400 });
+    if (!access_token) {
+      return NextResponse.json({ error: "Missing access_token" }, { status: 400 });
     }
 
     const supabase = createAdminClient();
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       .from("cli_auth_sessions")
       .update({
         access_token,
-        refresh_token,
+        refresh_token: refresh_token ?? "",
         user_id: user_id ?? null,
         email: email ?? null,
         name: name ?? null,

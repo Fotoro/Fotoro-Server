@@ -17,7 +17,7 @@ import {
   getStoredUser,
   type FotoroUser,
 } from "@/lib/fotoro-session";
-import { finishAuthForCli } from "@/lib/cli-handoff-session";
+import { handoffExistingSessionForCli } from "@/lib/cli-handoff-session";
 
 export interface NodeInfo {
   tailscale_ip: string;
@@ -37,7 +37,7 @@ export default function DashboardPage() {
 
   React.useEffect(() => {
     async function init() {
-      const handoff = await finishAuthForCli();
+      const handoff = await handoffExistingSessionForCli();
       if (handoff === "redirect") return;
       if (handoff === "poll") {
         setCliComplete(true);

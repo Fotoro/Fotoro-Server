@@ -3,54 +3,96 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { GoogleSignIn } from "@/components/auth/google-one-tap";
-import { captureCliParamsFromSearchParams } from "@/lib/cli-handoff";
-import { finishAuthForCli } from "@/lib/cli-handoff-session";
-import { isAuthenticated } from "@/lib/fotoro-session";
+import { GoogleOAuthSignIn } from "@/components/auth/google-oauth-sign-in";
+import {
+  captureCliParamsFromSearchParams,
+  getCliHandoffContext,
+} from "@/lib/cli-handoff";
+import { handoffExistingSessionForCli } from "@/lib/cli-handoff-session";
+import {
+  clearAuth,
+  getStoredToken,
+  getStoredUser,
+} from "@/lib/fotoro-session";
 
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") ?? "/dashboard";
-  const [checking, setChecking] = React.useState(true);
+  const [booting, setBooting] = React.useState(true);
   const [cliComplete, setCliComplete] = React.useState(false);
-  const [cliPending, setCliPending] = React.useState(false);
+  const [redirecting, setRedirecting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    captureCliParamsFromSearchParams(params);
-
-    async function init() {
-      if (!isAuthenticated()) {
-        setChecking(false);
-        return;
-      }
-
-      const handoff = await finishAuthForCli();
-      if (handoff === "redirect") return;
-      if (handoff === "poll") {
-        setCliComplete(true);
-        setChecking(false);
-        return;
-      }
-      if (handoff === "missing_refresh") {
-        // Stale session without refresh token — force re-sign-in for CLI
-        setChecking(false);
-        return;
-      }
-
-      router.replace(callbackUrl);
+    if (params.get("reauth") === "1") {
+      clearAuth();
     }
 
-    void init();
+    captureCliParamsFromSearchParams(params);
+
+    async function boot() {
+      const cli = getCliHandoffContext();
+      const token = getStoredToken();
+      const user = getStoredUser();
+
+      if (cli && token && user) {
+        try {
+          const result = await handoffExistingSessionForCli();
+          if (result === "redirect") {
+            setRedirecting(true);
+            return;
+          }
+          if (result === "poll") {
+            setCliComplete(true);
+            setBooting(false);
+            return;
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "CLI handoff failed");
+          setBooting(false);
+          return;
+        }
+      }
+
+      if (!token) {
+        setBooting(false);
+        return;
+      }
+
+      if (!cli) {
+        router.replace(callbackUrl);
+        return;
+      }
+
+      try {
+        const result = await handoffExistingSessionForCli();
+        if (result === "redirect") {
+          setRedirecting(true);
+          return;
+        }
+        if (result === "poll") {
+          setCliComplete(true);
+          setBooting(false);
+          return;
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "CLI handoff failed");
+      }
+
+      setBooting(false);
+    }
+
+    void boot();
   }, [callbackUrl, params, router]);
 
-  if (checking || cliPending) {
+  if (booting || redirecting) {
     return (
       <div className="flex h-40 flex-col items-center justify-center gap-2 text-muted-foreground">
         <Loader2 className="size-5 animate-spin" />
-        {cliPending ? (
-          <p className="text-xs">Returning to Fotoro…</p>
-        ) : null}
+        <p className="text-xs">
+          {redirecting ? "Returning to Fotoro…" : "Checking session…"}
+        </p>
       </div>
     );
   }
@@ -79,13 +121,13 @@ export function LoginForm() {
         </p>
       ) : null}
 
-      <GoogleSignIn
-        redirectTo={callbackUrl}
-        onCliHandoffComplete={(mode) => {
-          if (mode === "poll") setCliComplete(true);
-          if (mode === "redirect") setCliPending(true);
-        }}
-      />
+      {error ? (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive-foreground">
+          {error}
+        </p>
+      ) : null}
+
+      <GoogleOAuthSignIn />
 
       <div className="relative flex items-center">
         <span className="h-px flex-1 bg-border" />

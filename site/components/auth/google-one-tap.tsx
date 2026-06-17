@@ -13,15 +13,17 @@ import {
 
 interface GoogleSignInProps {
   onSuccess?: (token: string) => void;
-  /** Used only when not in a CLI auth flow */
   redirectTo?: string;
   onCliHandoffComplete?: (mode: "redirect" | "poll") => void;
+  /** Skip Google Identity Services when CLI flow or token already present */
+  cliMode?: boolean;
 }
 
 export function GoogleSignIn({
   onSuccess,
   redirectTo = "/dashboard",
   onCliHandoffComplete,
+  cliMode = false,
 }: GoogleSignInProps) {
   const router = useRouter();
   const handled = useRef(false);
@@ -150,6 +152,11 @@ export function GoogleSignIn({
   );
 
   useEffect(() => {
+    if (cliMode) {
+      setReady(true);
+      return;
+    }
+
     if (!clientId) {
       setError(
         "Google sign-in is not configured (missing NEXT_PUBLIC_GOOGLE_CLIENT_ID)."
@@ -166,7 +173,10 @@ export function GoogleSignIn({
         return false;
 
       const existing = localStorage.getItem("fotoro_access_token");
-      if (existing) return true;
+      if (existing) {
+        setReady(true);
+        return true;
+      }
 
       window.google.accounts.id.initialize({
         client_id: clientId!,
@@ -211,7 +221,7 @@ export function GoogleSignIn({
       cancelled = true;
       clearInterval(interval);
     };
-  }, [clientId, handleCredentialResponse, ready]);
+  }, [cliMode, clientId, handleCredentialResponse, ready]);
 
   return (
     <div className="space-y-3">
