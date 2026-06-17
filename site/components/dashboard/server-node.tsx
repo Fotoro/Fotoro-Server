@@ -1,11 +1,18 @@
 "use client";
 
+import * as React from "react";
 import { motion } from "framer-motion";
 import { Server, Wifi, WifiOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { NodeInfo } from "@/app/dashboard/page";
+import type { NodePublic } from "@/lib/fotoro-local";
 
-export function ServerNodeCard({ node }: { node: NodeInfo | null }) {
+export function ServerNodeCard({
+  node,
+  liveState,
+}: {
+  node: NodePublic | null;
+  liveState?: "online" | "offline" | "checking" | "syncing";
+}) {
   if (!node) {
     return (
       <motion.div
@@ -24,7 +31,7 @@ export function ServerNodeCard({ node }: { node: NodeInfo | null }) {
     );
   }
 
-  const online = node.status === "online";
+  const online = liveState === "online" || (liveState === undefined && node.status === "online");
 
   return (
     <motion.div
@@ -50,21 +57,17 @@ export function ServerNodeCard({ node }: { node: NodeInfo | null }) {
       </div>
       <dl className="divide-y divide-border">
         {[
-          { label: "Tailscale IP", value: node.tailscale_ip },
-          { label: "Public URL", value: node.public_url ?? node.tailnet_url ?? "—" },
+          { label: "Library URL", value: node.public_url ?? node.tailnet_url ?? "—" },
           { label: "Magic DNS", value: node.magic_dns ?? "—" },
-          { label: "Tailnet", value: node.tailnet_name ?? "—" },
-          {
-            label: "Last seen",
-            value: new Date(node.last_seen).toLocaleString(),
-          },
         ].map((row) => (
           <div
             key={row.label}
             className="flex items-center justify-between px-5 py-3 text-sm"
           >
             <dt className="text-muted-foreground">{row.label}</dt>
-            <dd className="font-mono text-xs text-foreground">{row.value}</dd>
+            <dd className="max-w-[60%] truncate font-mono text-xs text-foreground">
+              {row.value}
+            </dd>
           </div>
         ))}
       </dl>

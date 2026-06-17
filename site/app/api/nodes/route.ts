@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifySupabaseToken } from "@/lib/auth-verify";
 
+/** Never expose raw Tailscale IP to the browser — funnel URL only. */
+function sanitizeNodeForClient(node: Record<string, unknown> | null) {
+  if (!node) return null;
+  const { tailscale_ip: _ip, ...safe } = node;
+  return safe;
+}
+
 type NodeRow = {
   user_id: string;
   tailscale_ip: string;
@@ -144,7 +151,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ node: data ?? null });
+    return NextResponse.json({ node: sanitizeNodeForClient(data) ?? null });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal error";
     console.error("Node fetch error:", error);

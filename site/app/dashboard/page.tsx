@@ -4,13 +4,18 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Upload } from "lucide-react";
+import Link from "next/link";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import { DashboardStats } from "@/components/dashboard/stats";
 import { DeviceList } from "@/components/dashboard/device-list";
 import { ServerNodeCard } from "@/components/dashboard/server-node";
 import { UploadZone } from "@/components/dashboard/upload-zone";
 import { QrPair } from "@/components/dashboard/qr-pair";
-import { Badge } from "@/components/ui/badge";
+import {
+  ConnectivityBadge,
+  useNodeConnectivity,
+} from "@/components/dashboard/connectivity-badge";
+import { Button } from "@/components/ui/button";
 import {
   clearAuth,
   getStoredToken,
@@ -18,22 +23,13 @@ import {
   type FotoroUser,
 } from "@/lib/fotoro-session";
 import { handoffExistingSessionForCli } from "@/lib/cli-handoff-session";
-
-export interface NodeInfo {
-  tailscale_ip: string;
-  magic_dns: string | null;
-  tailnet_name: string | null;
-  node_name: string;
-  public_url?: string | null;
-  tailnet_url?: string | null;
-  status: "online" | "offline" | "error";
-  last_seen: string;
-}
+import type { NodePublic } from "@/lib/fotoro-local";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = React.useState<FotoroUser | null>(null);
-  const [node, setNode] = React.useState<NodeInfo | null>(null);
+  const [node, setNode] = React.useState<NodePublic | null>(null);
+  const [token, setToken] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [cliComplete, setCliComplete] = React.useState(false);
 
@@ -47,23 +43,24 @@ export default function DashboardPage() {
         return;
       }
 
-      const token = getStoredToken();
+      const supabaseToken = getStoredToken();
       const stored = getStoredUser();
-      if (!token || !stored) {
+      if (!supabaseToken || !stored) {
         router.replace("/login?callbackUrl=/dashboard");
         return;
       }
       setUser(stored);
-      fetchNode(token);
+      setToken(supabaseToken);
+      fetchNode(supabaseToken);
     }
 
     void init();
   }, [router]);
 
-  async function fetchNode(token: string) {
+  async function fetchNode(supabaseToken: string) {
     try {
       const res = await fetch("/api/nodes", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${supabaseToken}` },
       });
       const data = await res.json();
       setNode(data.node ?? null);
@@ -73,6 +70,8 @@ export default function DashboardPage() {
       setLoading(false);
     }
   }
+
+  const { state, refresh } = useNodeConnectivity(node, token);
 
   function handleLogout() {
     clearAuth();
@@ -108,7 +107,9 @@ export default function DashboardPage() {
     );
   }
 
-  if (!user) return null;
+  if (!user || !token) return null;
+
+  const serverOnline = state === "online";
 
   return (
     <>
@@ -128,35 +129,19 @@ export default function DashboardPage() {
               Welcome back{user.name ? `, ${user.name.split(" ")[0]}` : ""}.
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Manage your self-hosted Fotoro server and connected devices.
+              Your photos live on your hardware — this dashboard is just the remote control.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={node?.status === "online" ? "success" : "outline"}>
-              <span
-                className={`mr-1 inline-block size-1.5 rounded-full ${
-                  node?.status === "online"
-                    ? "animate-pulse-soft bg-white"
-                    : "bg-zinc-500"
-                }`}
-              />
-              {node?.status === "online" ? "Server online" : "No server"}
-            </Badge>
-            {node?.magic_dns ? (
-              <Badge variant="outline" className="font-mono text-[11px]">
-                {node.magic_dns}
-              </Badge>
-            ) : null}
-          </div>
+          <ConnectivityBadge state={state} onRefresh={refresh} />
         </div>
 
         <DashboardStats />
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div className="space-y-6">
-            <ServerNodeCard node={node} />
-            {node?.status === "online" ? (
-              <UploadZone node={node} token={getStoredToken() ?? ""} />
+            <ServerNodeCard node={node} liveState={state} />
+            {serverOnline && node ? (
+              <UploadZone node={node} supabaseToken={token} />
             ) : (
               <div className="rounded-xl border border-dashed border-border bg-card/40 p-8 text-center ring-soft">
                 <Upload className="mx-auto mb-3 size-8 text-muted-foreground" />
@@ -164,10 +149,16 @@ export default function DashboardPage() {
                   Connect your server to upload
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Install Fotoro on your laptop, run setup, and sign in with the same Google account.
+                  Run <code className="rounded bg-muted px-1">./fotoro server</code> on your
+                  machine after setup.
                 </p>
               </div>
             )}
+            {serverOnline ? (
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/dashboard/library">Open media library →</Link>
+              </Button>
+            ) : null}
             <DeviceList />
           </div>
           <QrPair />

@@ -3,27 +3,33 @@
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ImageIcon, Upload, X } from "lucide-react";
-import type { NodeInfo } from "@/app/dashboard/page";
+import {
+  fetchLocalCredentials,
+  type NodePublic,
+} from "@/lib/fotoro-local";
 
 type UploadState = Record<string, number>;
 
 export function UploadZone({
   node,
-  token,
+  supabaseToken,
 }: {
-  node: NodeInfo;
-  token: string;
+  node: NodePublic;
+  supabaseToken: string;
 }) {
   const [progress, setProgress] = React.useState<UploadState>({});
   const [dragging, setDragging] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  const serverUrl = React.useMemo(() => {
-    const host = node.magic_dns || node.tailscale_ip;
-    return `https://${host}:8765`;
-  }, [node]);
-
   async function uploadFiles(files: FileList) {
+    let creds;
+    try {
+      creds = await fetchLocalCredentials(supabaseToken);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not connect to server");
+      return;
+    }
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const formData = new FormData();
@@ -31,9 +37,9 @@ export function UploadZone({
       setProgress((prev) => ({ ...prev, [file.name]: 0 }));
 
       try {
-        const res = await fetch(`${serverUrl}/api/web/upload`, {
+        const res = await fetch(`${creds.base_url}/api/web/upload`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${creds.local_token}` },
           body: formData,
         });
         setProgress((prev) => ({
@@ -59,7 +65,7 @@ export function UploadZone({
           <h3 className="text-sm font-semibold tracking-tight">Upload photos</h3>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Drag and drop to upload directly to your server via Tailscale VPN.
+          Uploads go directly to your server via your secure funnel URL.
         </p>
       </div>
 
