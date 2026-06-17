@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ImageIcon, Loader2, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,14 @@ import { fetchPhotosPage } from "@/lib/fotoro-server-data";
 import { photoUrl, searchPhotos, type GalleryPhoto } from "@/lib/fotoro-local";
 import { useServerData } from "@/components/dashboard/server-data-provider";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 100;
+
+function mergePhotos(prev: GalleryPhoto[], next: GalleryPhoto[]): GalleryPhoto[] {
+  if (next.length === 0) return prev;
+  const seen = new Set(prev.map((p) => p.id));
+  const added = next.filter((p) => !seen.has(p.id));
+  return added.length === 0 ? prev : [...prev, ...added];
+}
 
 function LazyThumb({ photo }: { photo: GalleryPhoto }) {
   const ref = React.useRef<HTMLDivElement>(null);
@@ -22,7 +29,7 @@ function LazyThumb({ photo }: { photo: GalleryPhoto }) {
       (entries) => {
         if (entries[0]?.isIntersecting) setVisible(true);
       },
-      { rootMargin: "400px" }
+      { rootMargin: "480px" }
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -48,15 +55,17 @@ export function PhotoGallery() {
   const { token } = useServerData();
   const [photos, setPhotos] = React.useState<GalleryPhoto[]>([]);
   const [total, setTotal] = React.useState(0);
-  const [page, setPage] = React.useState(1);
   const [loading, setLoading] = React.useState(true);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [searching, setSearching] = React.useState(false);
   const [selected, setSelected] = React.useState<GalleryPhoto | null>(null);
-  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  const pageRef = React.useRef(1);
+  const totalRef = React.useRef(0);
   const fetchingRef = React.useRef(false);
+  const sentinelRef = React.useRef<HTMLDivElement>(null);
 
   const loadPage = React.useCallback(
     async (p: number, append: boolean) => {
@@ -66,16 +75,24 @@ export function PhotoGallery() {
       else setLoading(true);
       setError(null);
       try {
-        const data = await fetchPhotosPage(token, p, PAGE_SIZE);
+        const data = await fetchPhotosPage(
+          token,
+          p,
+          PAGE_SIZE,
+          append ? totalRef.current : undefined
+        );
+        totalRef.current = data.total;
+        pageRef.current = p;
         setTotal(data.total);
-        setPage(data.page);
-        setPhotos((prev) => (append ? [...prev, ...data.photos] : data.photos));
+        setPhotos((prev) => (append ? mergePhotos(prev, data.photos) : data.photos));
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Failed to load photos";
         setError(msg);
         if (!append) {
           setPhotos([]);
           setTotal(0);
+          totalRef.current = 0;
+          pageRef.current = 1;
         }
       } finally {
         setLoading(false);
@@ -86,31 +103,39 @@ export function PhotoGallery() {
     [token]
   );
 
-  React.useEffect(() => {
-    if (token) void loadPage(1, false);
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadMore = React.useCallback(() => {
+    if (fetchingRef.current) return;
+    if (photos.length >= totalRef.current) return;
+    void loadPage(pageRef.current + 1, true);
+  }, [photos.length, loadPage]);
 
   React.useEffect(() => {
-    const el = scrollRef.current;
-    if (!el || loading || loadingMore || query) return;
+    if (!token) return;
+    pageRef.current = 1;
+    totalRef.current = 0;
+    void loadPage(1, false);
+  }, [token, loadPage]);
 
-    function onScroll() {
-      if (!el || fetchingRef.current) return;
-      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 320;
-      const hasMore = photos.length > 0 && photos.length < total;
-      const pageFull = photos.length > 0 && photos.length % PAGE_SIZE === 0;
-      if (nearBottom && hasMore && pageFull) {
-        void loadPage(page + 1, true);
-      }
-    }
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [photos.length, total, page, loading, loadingMore, query, loadPage]);
+  React.useEffect(() => {
+    if (query || loading) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      },
+      { rootMargin: "600px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [query, loading, photos.length, loadMore]);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!token) return;
     if (!query.trim()) {
+      pageRef.current = 1;
       void loadPage(1, false);
       return;
     }
@@ -120,17 +145,21 @@ export function PhotoGallery() {
       const results = await searchPhotos(null, token, query.trim());
       setPhotos(results);
       setTotal(results.length);
-      setPage(1);
+      totalRef.current = results.length;
+      pageRef.current = 1;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
       setPhotos([]);
       setTotal(0);
+      totalRef.current = 0;
     } finally {
       setSearching(false);
     }
   }
 
   if (!token) return null;
+
+  const hasMore = !query && photos.length < total;
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -154,6 +183,7 @@ export function PhotoGallery() {
             size="icon"
             onClick={() => {
               setQuery("");
+              pageRef.current = 1;
               void loadPage(1, false);
             }}
           >
@@ -169,10 +199,7 @@ export function PhotoGallery() {
       ) : null}
 
       <div className="min-h-0 flex-1 rounded-xl border border-border bg-card/40 ring-soft">
-        <div
-          ref={scrollRef}
-          className="h-[min(70vh,720px)] overflow-y-auto overscroll-contain p-3"
-        >
+        <div className="h-[min(70vh,720px)] overflow-y-auto overscroll-contain p-3">
           {loading ? (
             <div className="flex h-full min-h-[240px] items-center justify-center text-muted-foreground">
               <Loader2 className="mr-2 size-5 animate-spin" />
@@ -189,22 +216,29 @@ export function PhotoGallery() {
             <>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
                 {photos.map((photo) => (
-                  <motion.button
+                  <button
                     key={photo.id}
                     type="button"
-                    layout
                     className="aspect-square overflow-hidden rounded-md border border-border bg-muted/30 transition hover:border-foreground/30"
                     onClick={() => setSelected(photo)}
                   >
                     <LazyThumb photo={photo} />
-                  </motion.button>
+                  </button>
                 ))}
               </div>
+
+              <div ref={sentinelRef} className="h-2 w-full" aria-hidden />
+
               {loadingMore ? (
                 <div className="flex justify-center py-4">
                   <Loader2 className="size-5 animate-spin text-muted-foreground" />
                 </div>
+              ) : hasMore ? (
+                <p className="py-2 text-center text-[10px] text-muted-foreground">
+                  Scroll for more…
+                </p>
               ) : null}
+
               <p className="py-3 text-center text-[11px] text-muted-foreground">
                 {photos.length.toLocaleString()} of {total.toLocaleString()} photos
               </p>

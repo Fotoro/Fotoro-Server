@@ -81,7 +81,7 @@ export async function fetchPhotos(
   _baseUrl: string | null,
   supabaseToken: string,
   page = 1,
-  limit = 50
+  limit = 100
 ): Promise<GalleryPhoto[]> {
   const data = await fetchPhotosPage(supabaseToken, page, limit);
   return data.photos;

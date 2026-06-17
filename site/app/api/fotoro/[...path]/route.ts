@@ -31,6 +31,7 @@ async function proxyToFunnel(
 ) {
   const base = await getUserNodeBaseUrl(userId);
   const target = new URL(path, base.endsWith("/") ? base : `${base}/`);
+  target.search = request.nextUrl.search;
 
   const headers = new Headers();
   headers.set("Authorization", `Bearer ${bearer}`);

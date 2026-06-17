@@ -141,16 +141,26 @@ export async function fetchServerDevices(token: string): Promise<ServerDevice[]>
 export async function fetchPhotosPage(
   token: string,
   page = 1,
-  limit = 50
+  limit = 100,
+  knownTotal?: number
 ): Promise<PhotosPage> {
-  const [rows, stats] = await Promise.all([
-    proxyGet<ApiImageRow[]>(`api/images?page=${page}&per_page=${limit}`, token),
-    proxyGet<ApiStats>("api/stats", token).catch(() => ({ total: 0 } as ApiStats)),
-  ]);
+  const rows = await proxyGet<ApiImageRow[]>(
+    `api/images?page=${page}&per_page=${limit}`,
+    token
+  );
   const list = Array.isArray(rows) ? rows : [];
+
+  let total = knownTotal ?? 0;
+  if (total <= 0) {
+    const stats = await proxyGet<ApiStats>("api/stats", token).catch(
+      () => ({ total: 0 } as ApiStats)
+    );
+    total = stats.total ?? list.length;
+  }
+
   return {
     photos: list.map(mapApiImage),
-    total: stats.total ?? list.length,
+    total,
     page,
     limit,
     count: list.length,
