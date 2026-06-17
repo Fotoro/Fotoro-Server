@@ -12,21 +12,21 @@ export const SITE = {
 } as const;
 
 export const NAV_LINKS = [
-  { href: "/#features", label: "Product" },
-  { href: "/#how-it-works", label: "How it works" },
+  { href: "/features", label: "Features" },
+  { href: "/how-it-works", label: "How it works" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/about", label: "About" },
   { href: "/docs", label: "Docs" },
-  { href: "/#pricing", label: "Pricing" },
 ] as const;
 
 export const FOOTER_LINKS = [
   {
     heading: "Product",
     links: [
-      { href: "/#features", label: "Features" },
-      { href: "/#how-it-works", label: "How it works" },
-      { href: "/#intelligence", label: "Intelligence layer" },
-      { href: "/#roadmap", label: "Roadmap" },
+      { href: "/features", label: "Features" },
+      { href: "/how-it-works", label: "How it works" },
       { href: "/download", label: "Download" },
+      { href: "/pricing", label: "Pricing" },
     ],
   },
   {
@@ -41,8 +41,8 @@ export const FOOTER_LINKS = [
   {
     heading: "Company",
     links: [
-      { href: "/#pricing", label: "Pricing" },
-      { href: "/#testimonials", label: "Customers" },
+      { href: "/about", label: "About" },
+      { href: "/pricing", label: "Pricing" },
       { href: SITE.github, label: "GitHub", external: true },
       { href: `mailto:${SITE.email}`, label: "Contact", external: true },
     ],

@@ -3,6 +3,15 @@ import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "./section-heading";
 
 const ROADMAP = [
+
+ {
+    quarter: "Q3 · 2026",
+    status: "Shipping",
+    statusTone: "brand" as const,
+    icon: Users,
+    title: "Android App support",
+    body: "Accessing images from anywhere from mobile phone, With local cache for offline usage",
+  },
   {
     quarter: "Q3 · 2026",
     status: "Shipping",

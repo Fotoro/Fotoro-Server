@@ -70,8 +70,8 @@ export function Hero() {
               <Link href="/docs#self-host">Get Started (Self-Host)</Link>
             </Button>
             <Button asChild size="xl" variant="ghost" className="text-muted-foreground">
-              <Link href="#demo">
-                <Play className="size-4" /> Watch demo
+              <Link href="/features">
+                <Play className="size-4" /> See features
               </Link>
             </Button>
           </div>

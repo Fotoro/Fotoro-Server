@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description: "Manage your self-hosted Fotoro server.",
+};
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (

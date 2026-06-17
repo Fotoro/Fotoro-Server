@@ -44,10 +44,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
-      const isProtected = nextUrl.pathname.startsWith("/dashboard");
-      if (isProtected) return isLoggedIn;
+    async authorized({ request: { nextUrl } }) {
+      // Dashboard uses Supabase client-side auth — do not gate with NextAuth
+      if (nextUrl.pathname.startsWith("/dashboard")) return true;
       return true;
     },
   },

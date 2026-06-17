@@ -42,7 +42,7 @@ const PLANS: readonly Plan[] = [
   {
     id: "semantic",
     name: "Semantic Search",
-    price: "$19",
+    price: "$0",
     suffix: "one-time, lifetime",
     description: "Unlock the multimodal AI that makes Fotoro magic.",
     featured: true,
@@ -60,7 +60,7 @@ const PLANS: readonly Plan[] = [
   {
     id: "migrator",
     name: "Google Photos Migrator",
-    price: "$45",
+    price: "$0",
     suffix: "one-time",
     description: "Pull a decade out of the cloud in a single afternoon.",
     icon: ImageDown,
@@ -76,7 +76,7 @@ const PLANS: readonly Plan[] = [
 ];
 
 export function Pricing() {
-  const [tip, setTip] = React.useState("7");
+  const [tip, setTip] = React.useState("2");
 
   return (
     <section id="pricing" className="container-tight scroll-mt-24 py-24">
@@ -144,7 +144,7 @@ export function Pricing() {
             </span>
             <div>
               <h3 className="text-base font-semibold tracking-tight">
-                Support the developer
+                Support the backend costs :)
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 Pay what you want — every dollar goes to keeping Fotoro independent.

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, Github, Menu } from "lucide-react";
+import { ArrowRight, Github, LayoutDashboard, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -14,11 +14,13 @@ import {
 } from "@/components/ui/sheet";
 import { Logo } from "@/components/site/logo";
 import { NAV_LINKS, SITE } from "@/lib/constants";
+import { isAuthenticated } from "@/lib/fotoro-session";
 import { cn } from "@/lib/utils";
 
 export function Navbar() {
   const [scrolled, setScrolled] = React.useState(false);
   const [open, setOpen] = React.useState(false);
+  const [loggedIn, setLoggedIn] = React.useState(false);
   const pathname = usePathname();
 
   React.useEffect(() => {
@@ -29,6 +31,10 @@ export function Navbar() {
   }, []);
 
   React.useEffect(() => setOpen(false), [pathname]);
+
+  React.useEffect(() => {
+    setLoggedIn(isAuthenticated());
+  }, [pathname]);
 
   return (
     <header
@@ -47,7 +53,12 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm transition-colors",
+                  pathname === link.href || pathname.startsWith(`${link.href}/`)
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                )}
               >
                 {link.label}
               </Link>
@@ -72,9 +83,18 @@ export function Navbar() {
               <span className="hidden lg:inline">Star</span>
             </Link>
           </Button>
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/login">Sign in</Link>
-          </Button>
+          {loggedIn ? (
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/dashboard">
+                <LayoutDashboard className="size-4" />
+                Dashboard
+              </Link>
+            </Button>
+          ) : (
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/login">Sign in</Link>
+            </Button>
+          )}
           <Button asChild size="sm" className="group">
             <Link href="/download">
               Download
@@ -84,9 +104,15 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2 md:hidden">
-          <Button asChild size="sm" variant="ghost">
-            <Link href="/login">Sign in</Link>
-          </Button>
+          {loggedIn ? (
+            <Button asChild size="sm" variant="ghost">
+              <Link href="/dashboard">Dashboard</Link>
+            </Button>
+          ) : (
+            <Button asChild size="sm" variant="ghost">
+              <Link href="/login">Sign in</Link>
+            </Button>
+          )}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="outline" size="icon" aria-label="Open menu">
@@ -104,7 +130,12 @@ export function Navbar() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    className={cn(
+                      "rounded-md px-3 py-2 text-sm transition-colors",
+                      pathname === link.href
+                        ? "bg-accent text-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    )}
                   >
                     {link.label}
                   </Link>
