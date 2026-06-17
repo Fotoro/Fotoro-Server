@@ -3,12 +3,12 @@
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ImageIcon, Upload, X } from "lucide-react";
-import { getNodeBaseUrl, type NodePublic } from "@/lib/fotoro-local";
+import type { NodePublic } from "@/lib/fotoro-local";
 
 type UploadState = Record<string, number>;
 
 export function UploadZone({
-  node,
+  node: _node,
   supabaseToken,
 }: {
   node: NodePublic;
@@ -18,14 +18,7 @@ export function UploadZone({
   const [dragging, setDragging] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  const serverUrl = React.useMemo(() => getNodeBaseUrl(node), [node]);
-
   async function uploadFiles(files: FileList) {
-    if (!serverUrl) {
-      alert("No funnel URL — run ./fotoro server");
-      return;
-    }
-
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const formData = new FormData();
@@ -33,7 +26,7 @@ export function UploadZone({
       setProgress((prev) => ({ ...prev, [file.name]: 0 }));
 
       try {
-        const res = await fetch(`${serverUrl}/api/web/upload`, {
+        const res = await fetch("/api/fotoro/api/web/upload", {
           method: "POST",
           headers: { Authorization: `Bearer ${supabaseToken}` },
           body: formData,
@@ -61,7 +54,7 @@ export function UploadZone({
           <h3 className="text-sm font-semibold tracking-tight">Upload photos</h3>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Uploads go directly to your server via your secure funnel URL.
+          Uploads go to your server via the secure Vercel → Tailscale tunnel.
         </p>
       </div>
 

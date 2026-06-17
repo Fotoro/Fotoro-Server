@@ -20,50 +20,29 @@ export function useNodeConnectivity(
   const [error, setError] = React.useState<string | null>(null);
 
   const probe = React.useCallback(async () => {
-    if (!node || !supabaseToken) {
+    if (!supabaseToken) {
       setState("offline");
       return;
     }
-
-    const url = getNodeBaseUrl(node);
-    if (!url) {
+    if (!node) {
       setState("offline");
-      setError(node.connect_error ?? "No funnel URL — run ./fotoro server");
+      setError("No server registered — run ./fotoro setup");
       return;
     }
 
-    setBaseUrl(url);
+    setBaseUrl(getNodeBaseUrl(node));
     setState("checking");
-    setError(node.connect_error ?? null);
 
-    const result = await checkServerStatus(url, supabaseToken);
+    const result = await checkServerStatus(null, supabaseToken);
     setState(result.state);
-    if (result.error) setError(result.error);
-    else if (node.connect_error && result.state === "offline") {
-      setError(node.connect_error);
-    } else if (result.state === "online") {
-      setError(null);
-    }
+    setError(result.error ?? null);
   }, [node, supabaseToken]);
 
   React.useEffect(() => {
-    if (node?.live === true && supabaseToken) {
-      const url = getNodeBaseUrl(node);
-      setBaseUrl(url);
-      setState("online");
-      setError(null);
-      return;
-    }
-    if (node?.live === false && node.connect_error) {
-      setError(node.connect_error);
-      setState("offline");
-      setBaseUrl(getNodeBaseUrl(node));
-      return;
-    }
     void probe();
     const id = setInterval(() => void probe(), 60_000);
     return () => clearInterval(id);
-  }, [node, supabaseToken, probe]);
+  }, [probe]);
 
   return { state, baseUrl, error, refresh: probe };
 }

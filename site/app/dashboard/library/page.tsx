@@ -4,59 +4,39 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
-import {
-  ConnectivityBadge,
-  useNodeConnectivity,
-} from "@/components/dashboard/connectivity-badge";
+import { ConnectivityBadge } from "@/components/dashboard/connectivity-badge";
 import { PhotoGallery } from "@/components/dashboard/photo-gallery";
 import {
   clearAuth,
+  clearProxyCookie,
   getStoredToken,
   getStoredUser,
   type FotoroUser,
 } from "@/lib/fotoro-session";
-import type { NodePublic } from "@/lib/fotoro-local";
+import { useServerData } from "@/components/dashboard/server-data-provider";
 
 export default function LibraryPage() {
   const router = useRouter();
   const [user, setUser] = React.useState<FotoroUser | null>(null);
-  const [node, setNode] = React.useState<NodePublic | null>(null);
   const [token, setToken] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const { online, refresh } = useServerData();
 
   React.useEffect(() => {
-    async function init() {
-      const supabaseToken = getStoredToken();
-      const stored = getStoredUser();
-      if (!supabaseToken || !stored) {
-        router.replace("/login?callbackUrl=/dashboard/library");
-        return;
-      }
-      setUser(stored);
-      setToken(supabaseToken);
-
-      try {
-        const res = await fetch("/api/nodes", {
-          headers: { Authorization: `Bearer ${supabaseToken}` },
-        });
-        const data = await res.json();
-        setNode(data.node ?? null);
-      } catch {
-        setNode(null);
-      } finally {
-        setLoading(false);
-      }
+    const t = getStoredToken();
+    const stored = getStoredUser();
+    if (!t || !stored) {
+      router.replace("/login?callbackUrl=/dashboard/library");
+      return;
     }
-    void init();
+    setUser(stored);
+    setToken(t);
+    setLoading(false);
   }, [router]);
-
-  const { state, baseUrl, error, refresh } = useNodeConnectivity(
-    node,
-    token
-  );
 
   function handleLogout() {
     clearAuth();
+    void clearProxyCookie();
     fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     router.push("/login");
   }
@@ -69,7 +49,9 @@ export default function LibraryPage() {
     );
   }
 
-  if (!user) return null;
+  if (!user || !token) return null;
+
+  const connState = online;
 
   return (
     <>
@@ -77,41 +59,31 @@ export default function LibraryPage() {
       <motion.main
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="container-tight w-full px-5 py-8"
+        className="container-tight flex min-h-0 w-full flex-1 flex-col px-5 py-8"
       >
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div className="mb-4 flex shrink-0 flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-wider text-muted-foreground">
               Media library
             </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-              Your photos
-            </h1>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Your photos</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Loaded directly from your machine — metadata never stored on Vercel.
+              Medium thumbnails first — full image loads on click.
             </p>
           </div>
-          <ConnectivityBadge state={state} onRefresh={refresh} />
+          <ConnectivityBadge state={connState} onRefresh={refresh} />
         </div>
 
-        {error || node?.connect_error ? (
-          <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
-            {error || node?.connect_error}
-          </p>
-        ) : null}
-
-        {state === "online" && baseUrl && token ? (
-          <PhotoGallery baseUrl={baseUrl} supabaseToken={token} />
-        ) : state === "checking" ? (
-          <div className="flex h-48 items-center justify-center text-muted-foreground">
-            Checking connection to your server…
+        {connState === "online" ? (
+          <PhotoGallery />
+        ) : connState === "checking" ? (
+          <div className="flex flex-1 items-center justify-center text-muted-foreground">
+            Checking connection…
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-border p-12 text-center">
-            <p className="text-sm font-medium text-foreground">Server unreachable</p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Run <code className="rounded bg-muted px-1">./fotoro server</code> on your
-              machine and ensure Tailscale Funnel is active.
+          <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-border p-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              Server unreachable — run <code className="rounded bg-muted px-1">./fotoro server</code>
             </p>
           </div>
         )}

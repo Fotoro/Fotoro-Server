@@ -49,6 +49,18 @@ export function clearAuth() {
   localStorage.removeItem(USER_KEY);
 }
 
+/** Sync httpOnly cookie so <img> tags can load /api/fotoro thumbs without blob fetch. */
+export async function syncProxyCookie(token: string): Promise<void> {
+  await fetch("/api/fotoro/cookie", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  }).catch(() => {});
+}
+
+export async function clearProxyCookie(): Promise<void> {
+  await fetch("/api/fotoro/cookie", { method: "DELETE" }).catch(() => {});
+}
+
 export function isAuthenticated(): boolean {
   return !!getStoredToken();
 }

@@ -16,34 +16,6 @@ function sanitizeNodeForClient(node: Record<string, unknown> | null) {
   return safe;
 }
 
-async function probeFunnelLive(
-  baseUrl: string,
-  bearerToken: string
-): Promise<{ live: boolean; error?: string }> {
-  const url = normalizeFotoroServerUrl(baseUrl);
-  try {
-    const res = await fetch(`${url}/status`, {
-      headers: { Authorization: `Bearer ${bearerToken}` },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      return {
-        live: false,
-        error: `Funnel returned ${res.status}${text ? `: ${text.slice(0, 80)}` : ""}`,
-      };
-    }
-    const data = (await res.json()) as { status?: string };
-    return { live: data.status === "online" };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "unreachable";
-    return {
-      live: false,
-      error: `Cannot reach funnel (${msg}). Run ./fotoro server and check: sudo tailscale funnel status`,
-    };
-  }
-}
-
 type NodeRow = {
   user_id: string;
   tailscale_ip: string;
@@ -188,17 +160,25 @@ export async function GET(request: NextRequest) {
 
     const safe = sanitizeNodeForClient(data);
     if (safe) {
-      const base = getNodeBaseUrl(
-        safe as { public_url?: string; tailnet_url?: string; magic_dns?: string }
-      );
-      if (base) {
-        const probe = await probeFunnelLive(base, token);
-        safe.live = probe.live;
-        if (!probe.live && probe.error) {
-          safe.connect_error = probe.error;
+      try {
+        const probeRes = await fetch(
+          new URL("/api/fotoro/status", request.url).toString(),
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: AbortSignal.timeout(12000),
+          }
+        );
+        const probeData = await probeRes.json().catch(() => ({}));
+        safe.live = probeRes.ok && (probeData as { status?: string }).status === "online";
+        if (!safe.live) {
+          safe.connect_error =
+            (probeData as { error?: string }).error ??
+            `Could not reach funnel (HTTP ${probeRes.status})`;
         }
-      } else {
-        safe.connect_error = "No funnel URL in database — run ./fotoro server";
+      } catch (err) {
+        safe.live = false;
+        safe.connect_error =
+          err instanceof Error ? err.message : "Funnel probe failed";
       }
     }
 

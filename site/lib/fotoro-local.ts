@@ -1,10 +1,9 @@
 /**
- * Browser → local Fotoro server (Tailscale Funnel).
- * Uses your existing Supabase session token — no extra FOTORO_LOCAL_TOKEN_SECRET needed.
- * (Local server verifies JWT via Supabase JWKS; same keys already in your .env.)
+ * Talks to your local Fotoro server via Vercel proxy (/api/fotoro/*).
+ * Your Supabase login token is forwarded — no extra secrets needed.
  */
 
-import { getNodeBaseUrl, normalizeFotoroServerUrl } from "@/lib/fotoro-url";
+import { fetchPhotosPage } from "@/lib/fotoro-server-data";
 
 export type ConnectivityState = "checking" | "online" | "offline" | "syncing";
 
@@ -33,78 +32,74 @@ export interface NodePublic {
   connect_error?: string | null;
 }
 
-export { getNodeBaseUrl, normalizeFotoroServerUrl };
+export { getNodeBaseUrl, normalizeFotoroServerUrl } from "@/lib/fotoro-url";
 
 function authHeaders(supabaseToken: string): HeadersInit {
   return { Authorization: `Bearer ${supabaseToken}` };
 }
 
+async function proxyFetch(
+  path: string,
+  supabaseToken: string,
+  init?: RequestInit
+): Promise<Response> {
+  const url = `/api/fotoro/${path.replace(/^\//, "")}`;
+  return fetch(url, {
+    ...init,
+    headers: {
+      ...authHeaders(supabaseToken),
+      ...(init?.headers ?? {}),
+    },
+  });
+}
+
 export async function checkServerStatus(
-  baseUrl: string,
+  _baseUrl: string | null,
   supabaseToken: string
 ): Promise<{ state: ConnectivityState; error?: string }> {
-  const url = normalizeFotoroServerUrl(baseUrl);
   try {
-    const res = await fetch(`${url}/status`, {
-      headers: authHeaders(supabaseToken),
-      signal: AbortSignal.timeout(10000),
+    const res = await proxyFetch("status", supabaseToken, {
+      signal: AbortSignal.timeout(12000),
     });
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
       return {
         state: "offline",
-        error: `Server returned ${res.status}${text ? `: ${text.slice(0, 120)}` : ""}`,
+        error: (data as { error?: string }).error ?? `Server returned ${res.status}`,
       };
     }
-    const data = (await res.json()) as ServerStatus;
-    if (data.status === "syncing") return { state: "syncing" };
-    return data.status === "online"
+    const status = data as ServerStatus;
+    if (status.status === "syncing") return { state: "syncing" };
+    return status.status === "online"
       ? { state: "online" }
       : { state: "offline", error: "Server status is not online" };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Connection failed";
-    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
-      return {
-        state: "offline",
-        error:
-          "Cannot reach your funnel URL. Run ./fotoro server and ensure Tailscale Funnel is active (sudo tailscale funnel status).",
-      };
-    }
-    return { state: "offline", error: msg };
+    return {
+      state: "offline",
+      error: err instanceof Error ? err.message : "Connection failed",
+    };
   }
 }
 
 export async function fetchPhotos(
-  baseUrl: string,
+  _baseUrl: string | null,
   supabaseToken: string,
   page = 1,
-  limit = 48
+  limit = 60
 ): Promise<GalleryPhoto[]> {
-  const url = normalizeFotoroServerUrl(baseUrl);
-  const res = await fetch(`${url}/photos?page=${page}&limit=${limit}`, {
-    headers: authHeaders(supabaseToken),
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!res.ok) {
-    throw new Error(`Photos fetch failed (${res.status})`);
-  }
-  const data = await res.json();
-  return (data.photos ?? []) as GalleryPhoto[];
+  const data = await fetchPhotosPage(supabaseToken, page, limit);
+  return data.photos;
 }
 
 export async function searchPhotos(
-  baseUrl: string,
+  _baseUrl: string | null,
   supabaseToken: string,
   query: string,
   limit = 48
 ): Promise<GalleryPhoto[]> {
-  const url = normalizeFotoroServerUrl(baseUrl);
-  const res = await fetch(`${url}/search`, {
+  const res = await proxyFetch("search", supabaseToken, {
     method: "POST",
-    headers: {
-      ...authHeaders(supabaseToken),
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ q: query, limit }),
     signal: AbortSignal.timeout(20000),
   });
@@ -122,27 +117,30 @@ export async function searchPhotos(
   );
 }
 
-export function thumbUrl(baseUrl: string, photo: GalleryPhoto): string {
-  const root = normalizeFotoroServerUrl(baseUrl);
-  const path = photo.thumbnail.startsWith("/")
+export function thumbUrl(_baseUrl: string | null, photo: GalleryPhoto): string {
+  let path = photo.thumbnail.startsWith("/")
     ? photo.thumbnail
     : `/thumb/${photo.id}`;
-  return `${root}${path}`;
+  if (!path.includes("size=")) {
+    path += (path.includes("?") ? "&" : "?") + "size=medium";
+  }
+  return `/api/fotoro${path}`;
 }
 
-export function photoUrl(baseUrl: string, id: string): string {
-  return `${normalizeFotoroServerUrl(baseUrl)}/photo/${id}`;
+export function photoUrl(_baseUrl: string | null, id: string): string {
+  return `/api/fotoro/photo/${id}`;
 }
 
 export async function fetchThumb(
-  baseUrl: string,
+  _baseUrl: string | null,
   supabaseToken: string,
   photo: GalleryPhoto
 ): Promise<string> {
-  const res = await fetch(thumbUrl(baseUrl, photo), {
-    headers: authHeaders(supabaseToken),
-    signal: AbortSignal.timeout(10000),
-  });
+  const res = await proxyFetch(
+    thumbUrl(null, photo).replace("/api/fotoro/", ""),
+    supabaseToken,
+    { signal: AbortSignal.timeout(15000) }
+  );
   if (!res.ok) throw new Error("Thumbnail load failed");
   const blob = await res.blob();
   return URL.createObjectURL(blob);

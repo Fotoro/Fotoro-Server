@@ -11,13 +11,12 @@ import { DeviceList } from "@/components/dashboard/device-list";
 import { ServerNodeCard } from "@/components/dashboard/server-node";
 import { UploadZone } from "@/components/dashboard/upload-zone";
 import { QrPair } from "@/components/dashboard/qr-pair";
-import {
-  ConnectivityBadge,
-  useNodeConnectivity,
-} from "@/components/dashboard/connectivity-badge";
+import { ConnectivityBadge } from "@/components/dashboard/connectivity-badge";
+import { useServerData } from "@/components/dashboard/server-data-provider";
 import { Button } from "@/components/ui/button";
 import {
   clearAuth,
+  clearProxyCookie,
   getStoredToken,
   getStoredUser,
   type FotoroUser,
@@ -71,10 +70,11 @@ export default function DashboardPage() {
     }
   }
 
-  const { state, refresh } = useNodeConnectivity(node, token);
+  const { online, refresh } = useServerData();
 
   function handleLogout() {
     clearAuth();
+    void clearProxyCookie();
     fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     router.push("/login");
   }
@@ -109,7 +109,7 @@ export default function DashboardPage() {
 
   if (!user || !token) return null;
 
-  const serverOnline = state === "online";
+  const serverOnline = online === "online";
 
   return (
     <>
@@ -132,14 +132,14 @@ export default function DashboardPage() {
               Your photos live on your hardware — this dashboard is just the remote control.
             </p>
           </div>
-          <ConnectivityBadge state={state} onRefresh={refresh} />
+          <ConnectivityBadge state={online} onRefresh={refresh} />
         </div>
 
         <DashboardStats />
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div className="space-y-6">
-            <ServerNodeCard node={node} liveState={state} />
+            <ServerNodeCard node={node} liveState={online} />
             {serverOnline && node ? (
               <UploadZone node={node} supabaseToken={token} />
             ) : (

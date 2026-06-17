@@ -12,11 +12,17 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/site/logo";
 import { Badge } from "@/components/ui/badge";
+import { useServerData } from "@/components/dashboard/server-data-provider";
+import {
+  formatBytes,
+  formatCount,
+  TBE,
+} from "@/lib/fotoro-server-data";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: Home },
-  { href: "/dashboard/devices", label: "Devices", icon: Smartphone, badge: "3" },
+  { href: "/dashboard/devices", label: "Devices", icon: Smartphone, badge: true },
   { href: "/dashboard/library", label: "Media library", icon: Images },
   { href: "/dashboard/storage", label: "Storage", icon: HardDrive },
   { href: "/dashboard/ai", label: "AI models", icon: Wand2 },
@@ -25,6 +31,20 @@ const NAV = [
 
 export function DashboardSidebar() {
   const pathname = usePathname();
+  const { stats, devices, online } = useServerData();
+  const live = online === "online" && stats;
+
+  const usedLabel = live ? formatBytes(stats.storage_used_bytes) : TBE;
+  const totalLabel =
+    live && stats.disk_total_bytes ? formatBytes(stats.disk_total_bytes) : TBE;
+  const pct =
+    live && stats.disk_total_bytes
+      ? Math.min(100, Math.round((stats.storage_used_bytes / stats.disk_total_bytes) * 100))
+      : 0;
+
+  const deviceBadge =
+    devices.length > 0 ? String(devices.length) : live ? String(stats.devices_count) : undefined;
+
   return (
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-border bg-card/30 px-4 py-5 md:flex md:flex-col">
       <div className="flex h-8 items-center justify-between">
@@ -39,6 +59,7 @@ export function DashboardSidebar() {
           const active =
             pathname === item.href ||
             (item.href !== "/dashboard" && pathname.startsWith(item.href));
+          const badge = item.badge ? deviceBadge : undefined;
           return (
             <Link
               key={item.href}
@@ -59,9 +80,9 @@ export function DashboardSidebar() {
                 />
                 {item.label}
               </span>
-              {item.badge ? (
+              {badge ? (
                 <span className="rounded-full border border-border bg-background/60 px-1.5 text-[10px] font-medium text-muted-foreground">
-                  {item.badge}
+                  {badge}
                 </span>
               ) : null}
             </Link>
@@ -72,16 +93,20 @@ export function DashboardSidebar() {
       <div className="mt-6 rounded-lg border border-border bg-background/40 p-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-foreground">Storage</p>
-          <p className="text-[10px] text-muted-foreground">412 GB / 1 TB</p>
+          <p className="text-[10px] text-muted-foreground">
+            {usedLabel} / {totalLabel}
+          </p>
         </div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border">
           <div
             className="h-full bg-gradient-to-r from-white to-zinc-500"
-            style={{ width: "41%" }}
+            style={{ width: live ? `${pct}%` : "0%" }}
           />
         </div>
         <p className="mt-2 text-[10px] text-muted-foreground">
-          24,381 items · 38 people · 61 places
+          {live
+            ? `${formatCount(stats.photos_total)} items · ${stats.people_count != null ? formatCount(stats.people_count) : TBE} people · ${stats.places_count != null ? formatCount(stats.places_count) : TBE} places`
+            : TBE}
         </p>
       </div>
     </aside>

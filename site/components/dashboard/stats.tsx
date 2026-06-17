@@ -1,36 +1,46 @@
-import { Activity, Database, ImageIcon, Users } from "lucide-react";
+"use client";
 
-const STATS = [
-  {
-    icon: ImageIcon,
-    label: "Media items",
-    value: "24,381",
-    delta: "+412 this week",
-  },
-  {
-    icon: Database,
-    label: "On disk",
-    value: "412.4 GB",
-    delta: "deduped 18.2 GB",
-  },
-  {
-    icon: Users,
-    label: "People",
-    value: "38",
-    delta: "12 named",
-  },
-  {
-    icon: Activity,
-    label: "AI queue",
-    value: "73%",
-    delta: "ETA 18m",
-  },
-];
+import { Activity, Database, ImageIcon, Users } from "lucide-react";
+import { useServerData } from "@/components/dashboard/server-data-provider";
+import { formatBytes, formatCount, TBE } from "@/lib/fotoro-server-data";
 
 export function DashboardStats() {
+  const { stats, online } = useServerData();
+  const live = online === "online" && stats;
+
+  const items = [
+    {
+      icon: ImageIcon,
+      label: "Media items",
+      value: live ? formatCount(stats.photos_total) : TBE,
+      delta: live ? `${formatCount(stats.thumbnails_medium)} thumbnails` : TBE,
+    },
+    {
+      icon: Database,
+      label: "On disk",
+      value: live ? formatBytes(stats.storage_used_bytes) : TBE,
+      delta: live && stats.disk_total_bytes
+        ? `${formatBytes(stats.disk_free_bytes)} free`
+        : TBE,
+    },
+    {
+      icon: Users,
+      label: "People",
+      value: live && stats.people_count != null ? formatCount(stats.people_count) : TBE,
+      delta: TBE,
+    },
+    {
+      icon: Activity,
+      label: "AI queue",
+      value:
+        live && stats.ai_queue_pct != null ? `${stats.ai_queue_pct}%` : TBE,
+      delta: TBE,
+    },
+  ];
+
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {STATS.map((s) => (
+      {items.map((s) => (
         <div
           key={s.label}
           className="rounded-xl border border-border bg-card p-4 ring-soft"
