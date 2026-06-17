@@ -3,10 +3,7 @@
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ImageIcon, Upload, X } from "lucide-react";
-import {
-  fetchLocalCredentials,
-  type NodePublic,
-} from "@/lib/fotoro-local";
+import { getNodeBaseUrl, type NodePublic } from "@/lib/fotoro-local";
 
 type UploadState = Record<string, number>;
 
@@ -21,12 +18,11 @@ export function UploadZone({
   const [dragging, setDragging] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
+  const serverUrl = React.useMemo(() => getNodeBaseUrl(node), [node]);
+
   async function uploadFiles(files: FileList) {
-    let creds;
-    try {
-      creds = await fetchLocalCredentials(supabaseToken);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not connect to server");
+    if (!serverUrl) {
+      alert("No funnel URL — run ./fotoro server");
       return;
     }
 
@@ -37,9 +33,9 @@ export function UploadZone({
       setProgress((prev) => ({ ...prev, [file.name]: 0 }));
 
       try {
-        const res = await fetch(`${creds.base_url}/api/web/upload`, {
+        const res = await fetch(`${serverUrl}/api/web/upload`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${creds.local_token}` },
+          headers: { Authorization: `Bearer ${supabaseToken}` },
           body: formData,
         });
         setProgress((prev) => ({

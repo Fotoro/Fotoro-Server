@@ -1,16 +1,12 @@
 /**
- * Browser → local Fotoro server (via Tailscale Funnel / Serve).
- * Uses short-lived tokens minted by /api/local-token — never sends raw Supabase JWT to funnel.
+ * Browser → local Fotoro server (Tailscale Funnel).
+ * Uses your existing Supabase session token — no extra FOTORO_LOCAL_TOKEN_SECRET needed.
+ * (Local server verifies JWT via Supabase JWKS; same keys already in your .env.)
  */
 
-export type ConnectivityState = "checking" | "online" | "offline" | "syncing";
+import { getNodeBaseUrl, normalizeFotoroServerUrl } from "@/lib/fotoro-url";
 
-export interface LocalTokenResponse {
-  local_token: string;
-  expires_in: number;
-  base_url: string;
-  node_name?: string;
-}
+export type ConnectivityState = "checking" | "online" | "offline" | "syncing";
 
 export interface GalleryPhoto {
   id: string;
@@ -33,83 +29,62 @@ export interface NodePublic {
   tailnet_url?: string | null;
   magic_dns?: string | null;
   status: string;
+  live?: boolean;
+  connect_error?: string | null;
 }
 
-export function getNodeBaseUrl(node: NodePublic): string | null {
-  const url = (node.public_url || node.tailnet_url || "").replace(/\/$/, "");
-  return url || null;
-}
+export { getNodeBaseUrl, normalizeFotoroServerUrl };
 
-let cachedLocal: {
-  token: string;
-  baseUrl: string;
-  expiresAt: number;
-} | null = null;
-
-export async function fetchLocalCredentials(
-  supabaseToken: string
-): Promise<LocalTokenResponse> {
-  const now = Date.now();
-  if (cachedLocal && cachedLocal.expiresAt > now + 30_000) {
-    return {
-      local_token: cachedLocal.token,
-      expires_in: Math.floor((cachedLocal.expiresAt - now) / 1000),
-      base_url: cachedLocal.baseUrl,
-    };
-  }
-
-  const res = await fetch("/api/local-token", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${supabaseToken}` },
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error ?? "Could not get local access token");
-  }
-
-  cachedLocal = {
-    token: data.local_token,
-    baseUrl: data.base_url,
-    expiresAt: now + (data.expires_in ?? 300) * 1000,
-  };
-  return data as LocalTokenResponse;
-}
-
-export function clearLocalTokenCache() {
-  cachedLocal = null;
+function authHeaders(supabaseToken: string): HeadersInit {
+  return { Authorization: `Bearer ${supabaseToken}` };
 }
 
 export async function checkServerStatus(
   baseUrl: string,
-  localToken: string
-): Promise<ConnectivityState> {
+  supabaseToken: string
+): Promise<{ state: ConnectivityState; error?: string }> {
+  const url = normalizeFotoroServerUrl(baseUrl);
   try {
-    const res = await fetch(`${baseUrl}/status`, {
-      headers: { Authorization: `Bearer ${localToken}` },
-      signal: AbortSignal.timeout(8000),
+    const res = await fetch(`${url}/status`, {
+      headers: authHeaders(supabaseToken),
+      signal: AbortSignal.timeout(10000),
     });
-    if (!res.ok) return "offline";
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      return {
+        state: "offline",
+        error: `Server returned ${res.status}${text ? `: ${text.slice(0, 120)}` : ""}`,
+      };
+    }
     const data = (await res.json()) as ServerStatus;
-    if (data.status === "syncing") return "syncing";
-    return data.status === "online" ? "online" : "offline";
-  } catch {
-    return "offline";
+    if (data.status === "syncing") return { state: "syncing" };
+    return data.status === "online"
+      ? { state: "online" }
+      : { state: "offline", error: "Server status is not online" };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Connection failed";
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      return {
+        state: "offline",
+        error:
+          "Cannot reach your funnel URL. Run ./fotoro server and ensure Tailscale Funnel is active (sudo tailscale funnel status).",
+      };
+    }
+    return { state: "offline", error: msg };
   }
 }
 
 export async function fetchPhotos(
   baseUrl: string,
-  localToken: string,
+  supabaseToken: string,
   page = 1,
   limit = 48
 ): Promise<GalleryPhoto[]> {
-  const res = await fetch(
-    `${baseUrl}/photos?page=${page}&limit=${limit}`,
-    {
-      headers: { Authorization: `Bearer ${localToken}` },
-      signal: AbortSignal.timeout(15000),
-    }
-  );
+  const url = normalizeFotoroServerUrl(baseUrl);
+  const res = await fetch(`${url}/photos?page=${page}&limit=${limit}`, {
+    headers: authHeaders(supabaseToken),
+    signal: AbortSignal.timeout(15000),
+  });
   if (!res.ok) {
     throw new Error(`Photos fetch failed (${res.status})`);
   }
@@ -119,14 +94,15 @@ export async function fetchPhotos(
 
 export async function searchPhotos(
   baseUrl: string,
-  localToken: string,
+  supabaseToken: string,
   query: string,
   limit = 48
 ): Promise<GalleryPhoto[]> {
-  const res = await fetch(`${baseUrl}/search`, {
+  const url = normalizeFotoroServerUrl(baseUrl);
+  const res = await fetch(`${url}/search`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${localToken}`,
+      ...authHeaders(supabaseToken),
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ q: query, limit }),
@@ -147,23 +123,24 @@ export async function searchPhotos(
 }
 
 export function thumbUrl(baseUrl: string, photo: GalleryPhoto): string {
+  const root = normalizeFotoroServerUrl(baseUrl);
   const path = photo.thumbnail.startsWith("/")
     ? photo.thumbnail
     : `/thumb/${photo.id}`;
-  return `${baseUrl}${path}`;
+  return `${root}${path}`;
 }
 
 export function photoUrl(baseUrl: string, id: string): string {
-  return `${baseUrl}/photo/${id}`;
+  return `${normalizeFotoroServerUrl(baseUrl)}/photo/${id}`;
 }
 
 export async function fetchThumb(
   baseUrl: string,
-  localToken: string,
+  supabaseToken: string,
   photo: GalleryPhoto
 ): Promise<string> {
   const res = await fetch(thumbUrl(baseUrl, photo), {
-    headers: { Authorization: `Bearer ${localToken}` },
+    headers: authHeaders(supabaseToken),
     signal: AbortSignal.timeout(10000),
   });
   if (!res.ok) throw new Error("Thumbnail load failed");

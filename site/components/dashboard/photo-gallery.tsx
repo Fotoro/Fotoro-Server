@@ -15,10 +15,10 @@ import {
 
 export function PhotoGallery({
   baseUrl,
-  localToken,
+  supabaseToken,
 }: {
   baseUrl: string;
-  localToken: string;
+  supabaseToken: string;
 }) {
   const [photos, setPhotos] = React.useState<GalleryPhoto[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -30,14 +30,14 @@ export function PhotoGallery({
   const loadPhotos = React.useCallback(async () => {
     setLoading(true);
     try {
-      const list = await fetchPhotos(baseUrl, localToken);
+      const list = await fetchPhotos(baseUrl, supabaseToken);
       setPhotos(list);
     } catch {
       setPhotos([]);
     } finally {
       setLoading(false);
     }
-  }, [baseUrl, localToken]);
+  }, [baseUrl, supabaseToken]);
 
   React.useEffect(() => {
     void loadPhotos();
@@ -49,7 +49,7 @@ export function PhotoGallery({
       for (const photo of photos) {
         if (thumbUrls[photo.id] || cancelled) continue;
         try {
-          const url = await fetchThumb(baseUrl, localToken, photo);
+          const url = await fetchThumb(baseUrl, supabaseToken, photo);
           if (!cancelled) {
             setThumbUrls((prev) => ({ ...prev, [photo.id]: url }));
           }
@@ -62,7 +62,7 @@ export function PhotoGallery({
     return () => {
       cancelled = true;
     };
-  }, [photos, baseUrl, localToken]);
+  }, [photos, baseUrl, supabaseToken]);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -72,7 +72,7 @@ export function PhotoGallery({
     }
     setSearching(true);
     try {
-      const results = await searchPhotos(baseUrl, localToken, query.trim());
+      const results = await searchPhotos(baseUrl, supabaseToken, query.trim());
       setPhotos(results);
     } catch {
       setPhotos([]);
@@ -173,7 +173,7 @@ export function PhotoGallery({
               {/* Full-res loaded with auth via fetch in production; img src won't send Bearer */}
               <AuthenticatedImage
                 src={photoUrl(baseUrl, selected.id)}
-                token={localToken}
+                token={supabaseToken}
                 alt={selected.caption}
               />
               {selected.caption ? (

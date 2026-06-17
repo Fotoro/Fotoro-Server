@@ -1,12 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifySupabaseToken } from "@/lib/auth-verify";
+import { getNodeBaseUrl, normalizeFotoroServerUrl } from "@/lib/fotoro-url";
 
 /** Never expose raw Tailscale IP to the browser — funnel URL only. */
 function sanitizeNodeForClient(node: Record<string, unknown> | null) {
   if (!node) return null;
   const { tailscale_ip: _ip, ...safe } = node;
+  if (typeof safe.public_url === "string") {
+    safe.public_url = normalizeFotoroServerUrl(safe.public_url);
+  }
+  if (typeof safe.tailnet_url === "string") {
+    safe.tailnet_url = normalizeFotoroServerUrl(safe.tailnet_url);
+  }
   return safe;
+}
+
+async function probeFunnelLive(
+  baseUrl: string,
+  bearerToken: string
+): Promise<{ live: boolean; error?: string }> {
+  const url = normalizeFotoroServerUrl(baseUrl);
+  try {
+    const res = await fetch(`${url}/status`, {
+      headers: { Authorization: `Bearer ${bearerToken}` },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      return {
+        live: false,
+        error: `Funnel returned ${res.status}${text ? `: ${text.slice(0, 80)}` : ""}`,
+      };
+    }
+    const data = (await res.json()) as { status?: string };
+    return { live: data.status === "online" };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "unreachable";
+    return {
+      live: false,
+      error: `Cannot reach funnel (${msg}). Run ./fotoro server and check: sudo tailscale funnel status`,
+    };
+  }
 }
 
 type NodeRow = {
@@ -85,8 +120,8 @@ export async function POST(request: NextRequest) {
       magic_dns: magic_dns || null,
       node_name: node_name || "fotoro-server",
       status: status || "online",
-      public_url: public_url || null,
-      tailnet_url: tailnet_url || null,
+      public_url: public_url ? normalizeFotoroServerUrl(public_url) : null,
+      tailnet_url: tailnet_url ? normalizeFotoroServerUrl(tailnet_url) : null,
       last_seen: now,
       updated_at: now,
     };
@@ -151,7 +186,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ node: sanitizeNodeForClient(data) ?? null });
+    const safe = sanitizeNodeForClient(data);
+    if (safe) {
+      const base = getNodeBaseUrl(
+        safe as { public_url?: string; tailnet_url?: string; magic_dns?: string }
+      );
+      if (base) {
+        const probe = await probeFunnelLive(base, token);
+        safe.live = probe.live;
+        if (!probe.live && probe.error) {
+          safe.connect_error = probe.error;
+        }
+      } else {
+        safe.connect_error = "No funnel URL in database — run ./fotoro server";
+      }
+    }
+
+    return NextResponse.json({ node: safe ?? null });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal error";
     console.error("Node fetch error:", error);

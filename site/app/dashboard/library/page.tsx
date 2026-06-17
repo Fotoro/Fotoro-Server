@@ -50,7 +50,7 @@ export default function LibraryPage() {
     void init();
   }, [router]);
 
-  const { state, baseUrl, localToken, error, refresh } = useNodeConnectivity(
+  const { state, baseUrl, error, refresh } = useNodeConnectivity(
     node,
     token
   );
@@ -94,14 +94,14 @@ export default function LibraryPage() {
           <ConnectivityBadge state={state} onRefresh={refresh} />
         </div>
 
-        {error ? (
+        {error || node?.connect_error ? (
           <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
-            {error}
+            {error || node?.connect_error}
           </p>
         ) : null}
 
-        {state === "online" && baseUrl && localToken ? (
-          <PhotoGallery baseUrl={baseUrl} localToken={localToken} />
+        {state === "online" && baseUrl && token ? (
+          <PhotoGallery baseUrl={baseUrl} supabaseToken={token} />
         ) : state === "checking" ? (
           <div className="flex h-48 items-center justify-center text-muted-foreground">
             Checking connection to your server…

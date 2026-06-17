@@ -6,9 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   checkServerStatus,
-  fetchLocalCredentials,
-  type ConnectivityState,
   getNodeBaseUrl,
+  type ConnectivityState,
   type NodePublic,
 } from "@/lib/fotoro-local";
 
@@ -18,7 +17,6 @@ export function useNodeConnectivity(
 ) {
   const [state, setState] = React.useState<ConnectivityState>("checking");
   const [baseUrl, setBaseUrl] = React.useState<string | null>(null);
-  const [localToken, setLocalToken] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   const probe = React.useCallback(async () => {
@@ -26,34 +24,48 @@ export function useNodeConnectivity(
       setState("offline");
       return;
     }
+
     const url = getNodeBaseUrl(node);
     if (!url) {
       setState("offline");
-      setError("No funnel URL — run ./fotoro server on your machine");
+      setError(node.connect_error ?? "No funnel URL — run ./fotoro server");
       return;
     }
 
+    setBaseUrl(url);
     setState("checking");
-    setError(null);
-    try {
-      const creds = await fetchLocalCredentials(supabaseToken);
-      setBaseUrl(creds.base_url);
-      setLocalToken(creds.local_token);
-      const live = await checkServerStatus(creds.base_url, creds.local_token);
-      setState(live);
-    } catch (err) {
-      setState("offline");
-      setError(err instanceof Error ? err.message : "Connection failed");
+    setError(node.connect_error ?? null);
+
+    const result = await checkServerStatus(url, supabaseToken);
+    setState(result.state);
+    if (result.error) setError(result.error);
+    else if (node.connect_error && result.state === "offline") {
+      setError(node.connect_error);
+    } else if (result.state === "online") {
+      setError(null);
     }
   }, [node, supabaseToken]);
 
   React.useEffect(() => {
+    if (node?.live === true && supabaseToken) {
+      const url = getNodeBaseUrl(node);
+      setBaseUrl(url);
+      setState("online");
+      setError(null);
+      return;
+    }
+    if (node?.live === false && node.connect_error) {
+      setError(node.connect_error);
+      setState("offline");
+      setBaseUrl(getNodeBaseUrl(node));
+      return;
+    }
     void probe();
     const id = setInterval(() => void probe(), 60_000);
     return () => clearInterval(id);
-  }, [probe]);
+  }, [node, supabaseToken, probe]);
 
-  return { state, baseUrl, localToken, error, refresh: probe };
+  return { state, baseUrl, error, refresh: probe };
 }
 
 export function ConnectivityBadge({
