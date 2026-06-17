@@ -1,10 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  buildLocalCallbackUrl,
-  isAllowedCliRedirect,
-  type CliSessionPayload,
-} from "@/lib/cli-handoff";
+import { type CliSessionPayload } from "@/lib/cli-handoff";
 
 export function sessionToCliPayload(session: Session): CliSessionPayload {
   const meta = session.user.user_metadata ?? {};
@@ -23,19 +19,16 @@ export function sessionToCliPayload(session: Session): CliSessionPayload {
 
 /**
  * Server-side CLI handoff after OAuth code exchange.
- * Returns the URL to redirect the browser to.
+ * Always writes tokens to Supabase for CLI polling — never redirects the browser
+ * to localhost (the CLI may not be listening when OAuth completes).
  */
 export async function resolveCliHandoffRedirect(
   session: Session,
   cliState: string,
-  redirectUri: string | null | undefined,
+  _redirectUri: string | null | undefined,
   origin: string
 ): Promise<string> {
   const payload = sessionToCliPayload(session);
-
-  if (redirectUri && isAllowedCliRedirect(redirectUri)) {
-    return buildLocalCallbackUrl(redirectUri, cliState, payload).toString();
-  }
 
   const supabase = createAdminClient();
   const { data, error } = await supabase

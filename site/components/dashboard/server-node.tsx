@@ -51,6 +51,7 @@ export function ServerNodeCard({ node }: { node: NodeInfo | null }) {
       <dl className="divide-y divide-border">
         {[
           { label: "Tailscale IP", value: node.tailscale_ip },
+          { label: "Public URL", value: node.public_url ?? node.tailnet_url ?? "—" },
           { label: "Magic DNS", value: node.magic_dns ?? "—" },
           { label: "Tailnet", value: node.tailnet_name ?? "—" },
           {

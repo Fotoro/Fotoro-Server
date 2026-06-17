@@ -24,6 +24,8 @@ export interface NodeInfo {
   magic_dns: string | null;
   tailnet_name: string | null;
   node_name: string;
+  public_url?: string | null;
+  tailnet_url?: string | null;
   status: "online" | "offline" | "error";
   last_seen: string;
 }

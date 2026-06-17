@@ -15,6 +15,8 @@ create table if not exists public.nodes (
     tailnet_name text,
     magic_dns text,
     node_name text default 'fotoro-server',
+    public_url text,
+    tailnet_url text,
     status text default 'offline' check (status in ('online', 'offline', 'error')),
     last_seen timestamptz default now(),
     created_at timestamptz default now(),

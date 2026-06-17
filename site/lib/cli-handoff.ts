@@ -120,6 +120,21 @@ export function isAllowedCliRedirect(uri: string): boolean {
   }
 }
 
+/** Returns true if the local Fotoro CLI auth server is listening. */
+export async function isLocalCliReachable(redirectUri: string): Promise<boolean> {
+  try {
+    const url = new URL(redirectUri);
+    const health = `${url.protocol}//${url.host}/api/health`;
+    const res = await fetch(health, {
+      method: "GET",
+      signal: AbortSignal.timeout(2500),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export function buildLocalCallbackUrl(
   redirectUri: string,
   state: string,
@@ -148,10 +163,13 @@ export async function completeCliHandoff(
   if (!ctx?.state) return "none";
 
   if (ctx.redirectUri && isAllowedCliRedirect(ctx.redirectUri)) {
-    const target = buildLocalCallbackUrl(ctx.redirectUri, ctx.state, session);
-    clearCliHandoffContext();
-    window.location.href = target.toString();
-    return "redirect";
+    const reachable = await isLocalCliReachable(ctx.redirectUri);
+    if (reachable) {
+      const target = buildLocalCallbackUrl(ctx.redirectUri, ctx.state, session);
+      clearCliHandoffContext();
+      window.location.href = target.toString();
+      return "redirect";
+    }
   }
 
   const res = await fetch("/api/auth/cli-handoff", {
