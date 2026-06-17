@@ -44,6 +44,7 @@ create policy "Users can update own nodes"
     on public.nodes for update
     using (auth.uid() = user_id);
 
+-- Function to update node heartbeat
 create or replace function log_node_heartbeat(node_uuid uuid)
 returns void as $$
 begin
@@ -52,3 +53,5 @@ begin
     where id = node_uuid;
 end;
 $$ language plpgsql security definer;
+
+-- CLI auth handoff (see supabase/cli_auth_sessions.sql for full migration)

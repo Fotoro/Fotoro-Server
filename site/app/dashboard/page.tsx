@@ -17,6 +17,7 @@ import {
   getStoredUser,
   type FotoroUser,
 } from "@/lib/fotoro-session";
+import { finishAuthForCli } from "@/lib/cli-handoff-session";
 
 export interface NodeInfo {
   tailscale_ip: string;
@@ -32,16 +33,29 @@ export default function DashboardPage() {
   const [user, setUser] = React.useState<FotoroUser | null>(null);
   const [node, setNode] = React.useState<NodeInfo | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [cliComplete, setCliComplete] = React.useState(false);
 
   React.useEffect(() => {
-    const token = getStoredToken();
-    const stored = getStoredUser();
-    if (!token || !stored) {
-      router.replace("/login?callbackUrl=/dashboard");
-      return;
+    async function init() {
+      const handoff = await finishAuthForCli();
+      if (handoff === "redirect") return;
+      if (handoff === "poll") {
+        setCliComplete(true);
+        setLoading(false);
+        return;
+      }
+
+      const token = getStoredToken();
+      const stored = getStoredUser();
+      if (!token || !stored) {
+        router.replace("/login?callbackUrl=/dashboard");
+        return;
+      }
+      setUser(stored);
+      fetchNode(token);
     }
-    setUser(stored);
-    fetchNode(token);
+
+    void init();
   }, [router]);
 
   async function fetchNode(token: string) {
@@ -75,6 +89,19 @@ export default function DashboardPage() {
           <span className="inline-block size-2 animate-pulse-soft rounded-full bg-foreground" />
           Loading dashboard…
         </motion.div>
+      </div>
+    );
+  }
+
+  if (cliComplete) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-5 text-center">
+        <p className="text-lg font-semibold text-foreground">
+          Signed in — return to the Fotoro app
+        </p>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          You can close this tab. The CLI should continue automatically.
+        </p>
       </div>
     );
   }
