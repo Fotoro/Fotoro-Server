@@ -29,9 +29,25 @@ export function LoginForm() {
       clearAuth();
     }
 
+    if (params.get("cli") === "complete") {
+      setCliComplete(true);
+      setBooting(false);
+      return;
+    }
+
+    const authError = params.get("error");
+    if (authError) {
+      setError(decodeURIComponent(authError));
+      setBooting(false);
+    }
+
     captureCliParamsFromSearchParams(params);
 
     async function boot() {
+      if (params.get("cli") === "complete" || params.get("error")) {
+        return;
+      }
+
       const cli = getCliHandoffContext();
       const token = getStoredToken();
       const user = getStoredUser();

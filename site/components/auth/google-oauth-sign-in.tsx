@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "@/components/site/oauth-icons";
 import { buildAuthCallbackUrl } from "@/lib/auth-finish";
-import { createBrowserClient } from "@/lib/supabase/browser";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 export function GoogleOAuthSignIn() {
   const [pending, setPending] = useState(false);
@@ -16,7 +16,7 @@ export function GoogleOAuthSignIn() {
     setPending(true);
 
     try {
-      const supabase = createBrowserClient();
+      const supabase = createBrowserSupabaseClient();
       const redirectTo = buildAuthCallbackUrl();
 
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({

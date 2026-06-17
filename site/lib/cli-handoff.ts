@@ -3,6 +3,11 @@
  * CLI opens /login?redirect_uri=http://127.0.0.1:8765/auth/callback&state=...&cli=1
  */
 
+export const CLI_COOKIE_STATE = "fotoro_cli_state";
+export const CLI_COOKIE_REDIRECT = "fotoro_redirect_uri";
+export const CLI_COOKIE_FLAG = "fotoro_cli";
+const CLI_COOKIE_MAX_AGE = 900; // 15 min
+
 const STATE_KEY = "fotoro_cli_state";
 const REDIRECT_KEY = "fotoro_redirect_uri";
 const CLI_FLAG_KEY = "fotoro_cli";
@@ -21,6 +26,29 @@ export interface CliSessionPayload {
   name: string;
 }
 
+function cookieOpts() {
+  return `path=/; max-age=${CLI_COOKIE_MAX_AGE}; SameSite=Lax`;
+}
+
+export function persistCliContextToCookies(ctx: CliHandoffContext) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${CLI_COOKIE_STATE}=${encodeURIComponent(ctx.state)}; ${cookieOpts()}`;
+  if (ctx.redirectUri) {
+    document.cookie = `${CLI_COOKIE_REDIRECT}=${encodeURIComponent(ctx.redirectUri)}; ${cookieOpts()}`;
+  }
+  if (ctx.isCli) {
+    document.cookie = `${CLI_COOKIE_FLAG}=1; ${cookieOpts()}`;
+  }
+}
+
+export function clearCliContextCookies() {
+  if (typeof document === "undefined") return;
+  const expired = "path=/; max-age=0; SameSite=Lax";
+  document.cookie = `${CLI_COOKIE_STATE}=; ${expired}`;
+  document.cookie = `${CLI_COOKIE_REDIRECT}=; ${expired}`;
+  document.cookie = `${CLI_COOKIE_FLAG}=; ${expired}`;
+}
+
 export function captureCliParamsFromSearchParams(
   params: URLSearchParams
 ): CliHandoffContext | null {
@@ -34,6 +62,14 @@ export function captureCliParamsFromSearchParams(
     sessionStorage.setItem(STATE_KEY, state);
     sessionStorage.setItem(REDIRECT_KEY, redirectUri ?? "");
     if (cli) sessionStorage.setItem(CLI_FLAG_KEY, cli);
+
+    const ctx: CliHandoffContext = {
+      state,
+      redirectUri: redirectUri || null,
+      isCli: cli === "1",
+    };
+    persistCliContextToCookies(ctx);
+    return ctx;
   }
 
   return getCliHandoffContext();
@@ -61,6 +97,7 @@ export function clearCliHandoffContext() {
   sessionStorage.removeItem(STATE_KEY);
   sessionStorage.removeItem(REDIRECT_KEY);
   sessionStorage.removeItem(CLI_FLAG_KEY);
+  clearCliContextCookies();
 }
 
 /** Only allow loopback callbacks — never redirect tokens to external hosts. */
@@ -74,7 +111,10 @@ export function isAllowedCliRedirect(uri: string): boolean {
     if (url.protocol !== "http:" && url.protocol !== "https:") {
       return false;
     }
-    return url.pathname === "/auth/callback" || url.pathname.endsWith("/auth/callback");
+    return (
+      url.pathname === "/auth/callback" ||
+      url.pathname.endsWith("/auth/callback")
+    );
   } catch {
     return false;
   }
