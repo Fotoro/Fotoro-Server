@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { GoogleOneTap } from "@/components/auth/google-one-tap";
+import { GoogleSignIn } from "@/components/auth/google-one-tap";
 import { isAuthenticated } from "@/lib/fotoro-session";
 
 export function LoginForm() {
@@ -30,11 +30,7 @@ export function LoginForm() {
 
   return (
     <div className="space-y-6">
-      <GoogleOneTap redirectTo={callbackUrl} />
-
-      <div className="flex min-h-[52px] items-center justify-center">
-        <div id="g_id_signin" className="flex justify-center" />
-      </div>
+      <GoogleSignIn redirectTo={callbackUrl} />
 
       <div className="relative flex items-center">
         <span className="h-px flex-1 bg-border" />
