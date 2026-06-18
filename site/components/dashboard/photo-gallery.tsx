@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { fetchPhotosPage } from "@/lib/fotoro-server-data";
 import { photoUrl, searchPhotos, type GalleryPhoto } from "@/lib/fotoro-local";
-import { resolveMediaUrl } from "@/lib/fotoro-media-url";
 import { useServerData } from "@/components/dashboard/server-data-provider";
 
 const PAGE_SIZE = 100;
@@ -20,25 +19,14 @@ function mergePhotos(prev: GalleryPhoto[], next: GalleryPhoto[]): GalleryPhoto[]
   return added.length === 0 ? prev : [...prev, ...added];
 }
 
-function LazyThumb({
-  photo,
-  index,
-  funnelBase,
-  token,
-}: {
-  photo: GalleryPhoto;
-  index: number;
-  funnelBase: string | null;
-  token: string;
-}) {
+function LazyThumb({ photo, index }: { photo: GalleryPhoto; index: number }) {
   const eager = index < EAGER_COUNT;
-  const src = resolveMediaUrl(funnelBase, token, photo.thumbnail);
 
   return (
     <div className="size-full bg-muted/20">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={src}
+        src={photo.thumbnail}
         alt=""
         className="size-full object-cover"
         loading={eager ? "eager" : "lazy"}
@@ -50,7 +38,7 @@ function LazyThumb({
 }
 
 export function PhotoGallery() {
-  const { token, funnelBase } = useServerData();
+  const { token, connectError } = useServerData();
   const [photos, setPhotos] = React.useState<GalleryPhoto[]>([]);
   const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
@@ -65,18 +53,6 @@ export function PhotoGallery() {
   const fetchingRef = React.useRef(false);
   const prefetchRef = React.useRef<Map<number, GalleryPhoto[]>>(new Map());
   const sentinelRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!funnelBase) return;
-    const link = document.createElement("link");
-    link.rel = "preconnect";
-    link.href = funnelBase;
-    link.crossOrigin = "anonymous";
-    document.head.appendChild(link);
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, [funnelBase]);
 
   const prefetchPage = React.useCallback(
     (p: number) => {
@@ -202,6 +178,7 @@ export function PhotoGallery() {
 
   if (!token) return null;
 
+  const displayError = error ?? connectError;
   const hasMore = !query && photos.length < total;
 
   return (
@@ -236,9 +213,9 @@ export function PhotoGallery() {
         ) : null}
       </form>
 
-      {error ? (
+      {displayError ? (
         <p className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
-          {error}
+          {displayError}
         </p>
       ) : null}
 
@@ -253,7 +230,7 @@ export function PhotoGallery() {
             <div className="flex h-full min-h-[240px] flex-col items-center justify-center text-center">
               <ImageIcon className="mb-3 size-8 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                {error ? "Could not reach your server." : "No photos indexed yet."}
+                {displayError ? "Could not load library." : "No photos indexed yet."}
               </p>
             </div>
           ) : (
@@ -266,12 +243,7 @@ export function PhotoGallery() {
                     className="aspect-square overflow-hidden rounded-md border border-border bg-muted/30 transition hover:border-foreground/30"
                     onClick={() => setSelected(photo)}
                   >
-                    <LazyThumb
-                      photo={photo}
-                      index={index}
-                      funnelBase={funnelBase}
-                      token={token}
-                    />
+                    <LazyThumb photo={photo} index={index} />
                   </button>
                 ))}
               </div>
@@ -289,8 +261,7 @@ export function PhotoGallery() {
               ) : null}
 
               <p className="py-3 text-center text-[11px] text-muted-foreground">
-                {photos.length.toLocaleString()} of {total.toLocaleString()} photos
-                {funnelBase ? " · direct" : " · proxied"}
+                {photos.length.toLocaleString()} of {total.toLocaleString()} photos · secure relay
               </p>
             </>
           )}
@@ -298,7 +269,7 @@ export function PhotoGallery() {
       </div>
 
       <AnimatePresence>
-        {selected && token ? (
+        {selected ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -312,10 +283,7 @@ export function PhotoGallery() {
               className="flex max-h-[92vh] max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-card"
               onClick={(e) => e.stopPropagation()}
             >
-              <AuthenticatedImage
-                src={photoUrl(funnelBase, selected.id, token)}
-                alt=""
-              />
+              <AuthenticatedImage src={photoUrl(null, selected.id)} alt="" />
               <div className="border-t border-border px-4 py-3 text-sm">
                 <p className="font-medium text-foreground">
                   {selected.caption?.trim() || "No description"}

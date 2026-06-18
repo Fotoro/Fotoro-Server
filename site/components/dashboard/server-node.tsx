@@ -31,7 +31,7 @@ export function ServerNodeCard({
     );
   }
 
-  const online = liveState === "online" || (liveState === undefined && node.status === "online");
+  const online = liveState === "online" || (liveState === undefined && node.live);
 
   return (
     <motion.div
@@ -56,20 +56,13 @@ export function ServerNodeCard({
         </Badge>
       </div>
       <dl className="divide-y divide-border">
-        {[
-          { label: "Library URL", value: node.public_url ?? node.tailnet_url ?? "—" },
-          { label: "Magic DNS", value: node.magic_dns ?? "—" },
-        ].map((row) => (
-          <div
-            key={row.label}
-            className="flex items-center justify-between px-5 py-3 text-sm"
-          >
-            <dt className="text-muted-foreground">{row.label}</dt>
-            <dd className="max-w-[60%] truncate font-mono text-xs text-foreground">
-              {row.value}
-            </dd>
-          </div>
-        ))}
+        <div className="flex items-center justify-between px-5 py-3 text-sm">
+          <dt className="text-muted-foreground">Connection</dt>
+          <dd className="font-mono text-xs text-foreground">Fotoro secure relay</dd>
+        </div>
+        {node.connect_error ? (
+          <div className="px-5 py-3 text-xs text-muted-foreground">{node.connect_error}</div>
+        ) : null}
       </dl>
     </motion.div>
   );

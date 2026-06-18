@@ -68,25 +68,13 @@ export default function LibraryPage() {
             </p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">Your photos</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Medium thumbnails first — full image loads on click.
+              Loaded via secure relay — your server address stays private.
             </p>
           </div>
           <ConnectivityBadge state={connState} onRefresh={refresh} />
         </div>
 
-        {connState === "online" ? (
-          <PhotoGallery />
-        ) : connState === "checking" ? (
-          <div className="flex flex-1 items-center justify-center text-muted-foreground">
-            Checking connection…
-          </div>
-        ) : (
-          <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-border p-12 text-center">
-            <p className="text-sm text-muted-foreground">
-              Server unreachable — run <code className="rounded bg-muted px-1">./fotoro server</code>
-            </p>
-          </div>
-        )}
+        <PhotoGallery />
       </motion.main>
     </>
   );

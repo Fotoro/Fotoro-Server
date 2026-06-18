@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   checkServerStatus,
-  getNodeBaseUrl,
   type ConnectivityState,
   type NodePublic,
 } from "@/lib/fotoro-local";
@@ -16,7 +15,6 @@ export function useNodeConnectivity(
   supabaseToken: string | null
 ) {
   const [state, setState] = React.useState<ConnectivityState>("checking");
-  const [baseUrl, setBaseUrl] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   const probe = React.useCallback(async () => {
@@ -30,7 +28,6 @@ export function useNodeConnectivity(
       return;
     }
 
-    setBaseUrl(getNodeBaseUrl(node));
     setState("checking");
 
     const result = await checkServerStatus(null, supabaseToken);
@@ -44,7 +41,7 @@ export function useNodeConnectivity(
     return () => clearInterval(id);
   }, [probe]);
 
-  return { state, baseUrl, error, refresh: probe };
+  return { state, error, refresh: probe };
 }
 
 export function ConnectivityBadge({

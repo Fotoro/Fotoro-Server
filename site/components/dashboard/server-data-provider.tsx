@@ -9,12 +9,11 @@ import {
   type ServerLibraryStats,
 } from "@/lib/fotoro-server-data";
 import { checkServerStatus, type ConnectivityState } from "@/lib/fotoro-local";
-import { getNodeBaseUrl } from "@/lib/fotoro-url";
 
 interface ServerDataContextValue {
   token: string | null;
-  funnelBase: string | null;
   online: ConnectivityState;
+  connectError: string | null;
   stats: ServerLibraryStats | null;
   devices: ServerDevice[];
   loading: boolean;
@@ -23,8 +22,8 @@ interface ServerDataContextValue {
 
 const ServerDataContext = React.createContext<ServerDataContextValue>({
   token: null,
-  funnelBase: null,
   online: "offline",
+  connectError: null,
   stats: null,
   devices: [],
   loading: true,
@@ -33,8 +32,8 @@ const ServerDataContext = React.createContext<ServerDataContextValue>({
 
 export function ServerDataProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = React.useState<string | null>(null);
-  const [funnelBase, setFunnelBase] = React.useState<string | null>(null);
   const [online, setOnline] = React.useState<ConnectivityState>("checking");
+  const [connectError, setConnectError] = React.useState<string | null>(null);
   const [stats, setStats] = React.useState<ServerLibraryStats | null>(null);
   const [devices, setDevices] = React.useState<ServerDevice[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -43,46 +42,31 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
     const t = getStoredToken();
     setToken(t);
     if (!t) {
-      setFunnelBase(null);
       setOnline("offline");
+      setConnectError(null);
       setStats(null);
       setDevices([]);
       setLoading(false);
       return;
     }
 
+    setOnline("checking");
     await syncProxyCookie(t);
 
     const conn = await checkServerStatus(null, t);
     setOnline(conn.state);
+    setConnectError(conn.error ?? null);
 
     if (conn.state !== "online") {
-      setFunnelBase(null);
       setStats(null);
       setDevices([]);
       setLoading(false);
       return;
     }
 
-    const [s, d, nodeRes] = await Promise.all([
-      fetchLibraryStats(t),
-      fetchServerDevices(t),
-      fetch("/api/nodes", { headers: { Authorization: `Bearer ${t}` } }).catch(
-        () => null
-      ),
-    ]);
+    const [s, d] = await Promise.all([fetchLibraryStats(t), fetchServerDevices(t)]);
     setStats(s);
     setDevices(d);
-
-    if (nodeRes?.ok) {
-      const nodeData = (await nodeRes.json().catch(() => ({}))) as {
-        node?: { public_url?: string; tailnet_url?: string; magic_dns?: string };
-      };
-      setFunnelBase(nodeData.node ? getNodeBaseUrl(nodeData.node) : null);
-    } else {
-      setFunnelBase(null);
-    }
-
     setLoading(false);
   }, []);
 
@@ -94,7 +78,7 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <ServerDataContext.Provider
-      value={{ token, funnelBase, online, stats, devices, loading, refresh }}
+      value={{ token, online, connectError, stats, devices, loading, refresh }}
     >
       {children}
     </ServerDataContext.Provider>

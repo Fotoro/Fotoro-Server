@@ -1,5 +1,5 @@
 import type { GalleryPhoto } from "@/lib/fotoro-local";
-import { gridThumbPath, GRID_THUMB_SIZE } from "@/lib/fotoro-media-url";
+import { gridThumbPath, GRID_THUMB_SIZE, proxyMediaUrl } from "@/lib/fotoro-media-url";
 
 export const TBE = "TBE";
 
@@ -80,11 +80,12 @@ export function thumbApiPath(hash: string, thumbnail?: string): string {
 }
 
 function mapApiImage(row: ApiImageRow): GalleryPhoto {
+  const apiPath = thumbApiPath(row.hash, row.thumbnail);
   return {
     id: row.hash,
     caption: row.caption,
     category: row.category,
-    thumbnail: thumbApiPath(row.hash, row.thumbnail),
+    thumbnail: proxyMediaUrl(apiPath),
   };
 }
 

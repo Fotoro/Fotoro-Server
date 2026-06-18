@@ -1,35 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { verifySupabaseToken } from "@/lib/auth-verify";
-import { getNodeBaseUrl } from "@/lib/fotoro-url";
 import { FOTORO_PROXY_COOKIE } from "@/lib/fotoro-proxy-cookie";
+import { getRelayBaseUrlForUser, sanitizeRelayError } from "@/lib/fotoro-relay";
 
-async function getUserNodeBaseUrl(userId: string) {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("nodes")
-    .select("public_url, tailnet_url, magic_dns")
-    .eq("user_id", userId)
-    .order("last_seen", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("No server registered — run ./fotoro setup");
-
-  const base = getNodeBaseUrl(data);
-  if (!base) throw new Error("No funnel URL — run ./fotoro server");
-  return base;
-}
-
-/** Server-side proxy to your Tailscale funnel (bypasses browser CORS/DNS issues). */
-async function proxyToFunnel(
+/** Server-side proxy to your home server via Tailscale funnel — URL never exposed to browser. */
+async function proxyToRelay(
   request: NextRequest,
   path: string,
   userId: string,
   bearer: string
 ) {
-  const base = await getUserNodeBaseUrl(userId);
+  const base = await getRelayBaseUrlForUser(userId);
   const target = new URL(path, base.endsWith("/") ? base : `${base}/`);
   target.search = request.nextUrl.search;
 
@@ -61,7 +42,8 @@ async function proxyToFunnel(
     const msg = err instanceof Error ? err.message : "fetch failed";
     return NextResponse.json(
       {
-        error: `Cannot reach your funnel at ${base}. Run ./fotoro server and: sudo tailscale funnel status. (${msg})`,
+        error: sanitizeRelayError(msg) ||
+          "Cannot reach your home server. Run ./fotoro server and ./fotoro nodesync.",
       },
       { status: 502 }
     );
@@ -124,9 +106,12 @@ async function handleProxy(
     const { path: segments } = await context.params;
     const path = (segments ?? []).join("/");
 
-    return proxyToFunnel(request, path, userId, bearer);
+    return proxyToRelay(request, path, userId, bearer);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Proxy error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: sanitizeRelayError(message) || "Relay error" },
+      { status: 500 }
+    );
   }
 }

@@ -2,18 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifySupabaseToken } from "@/lib/auth-verify";
 import { normalizeFotoroServerUrl } from "@/lib/fotoro-url";
+import { relayFetch, sanitizeRelayError } from "@/lib/fotoro-relay";
 
-/** Never expose raw Tailscale IP to the browser — funnel URL only. */
-function sanitizeNodeForClient(node: Record<string, unknown> | null) {
+/** Browser-safe node record — no funnel URL, tailscale IP, or magic DNS. */
+function sanitizeNodeForClient(
+  node: Record<string, unknown> | null,
+  live?: boolean,
+  connectError?: string | null
+) {
   if (!node) return null;
-  const { tailscale_ip: _ip, ...safe } = node;
-  if (typeof safe.public_url === "string") {
-    safe.public_url = normalizeFotoroServerUrl(safe.public_url);
-  }
-  if (typeof safe.tailnet_url === "string") {
-    safe.tailnet_url = normalizeFotoroServerUrl(safe.tailnet_url);
-  }
-  return safe;
+  return {
+    node_name: node.node_name ?? "fotoro-server",
+    status: node.status ?? "unknown",
+    last_seen: node.last_seen ?? null,
+    live: live ?? false,
+    connect_error: connectError ? sanitizeRelayError(connectError) : null,
+  };
 }
 
 type NodeRow = {
@@ -158,31 +162,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const safe = sanitizeNodeForClient(data);
-    if (safe) {
+    let live = false;
+    let connectError: string | null = null;
+
+    if (data) {
       try {
-        const probeRes = await fetch(
-          new URL("/api/fotoro/api/stats", request.url).toString(),
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: AbortSignal.timeout(12000),
-          }
-        );
+        const probeRes = await relayFetch(userId, token, "api/stats");
         const probeData = await probeRes.json().catch(() => ({}));
-        safe.live = probeRes.ok && typeof (probeData as { total?: number }).total === "number";
-        if (!safe.live) {
-          safe.connect_error =
+        live = probeRes.ok && typeof (probeData as { total?: number }).total === "number";
+        if (!live) {
+          connectError =
             (probeData as { error?: string }).error ??
-            `Could not reach funnel (HTTP ${probeRes.status})`;
+            `Relay returned HTTP ${probeRes.status}`;
         }
       } catch (err) {
-        safe.live = false;
-        safe.connect_error =
-          err instanceof Error ? err.message : "Funnel probe failed";
+        live = false;
+        connectError = err instanceof Error ? err.message : "Relay probe failed";
       }
     }
 
-    return NextResponse.json({ node: safe ?? null });
+    return NextResponse.json({
+      node: sanitizeNodeForClient(data, live, connectError),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal error";
     console.error("Node fetch error:", error);

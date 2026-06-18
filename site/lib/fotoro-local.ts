@@ -1,13 +1,13 @@
 /**
- * Talks to your local Fotoro server via Vercel proxy (/api/fotoro/*).
- * Uses the same /api/* routes as the Qt desktop (main.cpp).
+ * Talks to your local Fotoro server only via Vercel secure relay (/api/fotoro/*).
+ * Funnel URLs and tailscale IPs never reach the browser.
  */
 
 import {
   fetchPhotosPage,
   searchPhotosApi,
 } from "@/lib/fotoro-server-data";
-import { fullImagePath, resolveMediaUrl } from "@/lib/fotoro-media-url";
+import { fullImagePath, proxyMediaUrl } from "@/lib/fotoro-media-url";
 
 export type ConnectivityState = "checking" | "online" | "offline" | "syncing";
 
@@ -21,54 +21,42 @@ export interface GalleryPhoto {
 
 export interface NodePublic {
   node_name: string;
-  public_url?: string | null;
-  tailnet_url?: string | null;
-  magic_dns?: string | null;
   status: string;
   live?: boolean;
   connect_error?: string | null;
+  last_seen?: string;
 }
 
-export { getNodeBaseUrl, normalizeFotoroServerUrl } from "@/lib/fotoro-url";
+export { normalizeFotoroServerUrl } from "@/lib/fotoro-url";
 
 function authHeaders(supabaseToken: string): HeadersInit {
   return { Authorization: `Bearer ${supabaseToken}` };
 }
 
-async function proxyFetch(
-  path: string,
-  supabaseToken: string,
-  init?: RequestInit
-): Promise<Response> {
-  const url = `/api/fotoro/${path.replace(/^\//, "")}`;
-  return fetch(url, {
-    ...init,
-    headers: {
-      ...authHeaders(supabaseToken),
-      ...(init?.headers ?? {}),
-    },
-  });
-}
-
-/** Online when /api/stats responds — same probe desktop uses. */
+/** Server-side relay probe — no funnel URL in browser. */
 export async function checkServerStatus(
   _baseUrl: string | null,
   supabaseToken: string
 ): Promise<{ state: ConnectivityState; error?: string }> {
   try {
-    const res = await proxyFetch("api/stats", supabaseToken, {
-      signal: AbortSignal.timeout(12000),
+    const res = await fetch("/api/connectivity", {
+      headers: authHeaders(supabaseToken),
+      signal: AbortSignal.timeout(20_000),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       return {
         state: "offline",
-        error: (data as { error?: string }).error ?? `Server returned ${res.status}`,
+        error: (data as { error?: string }).error ?? "Relay check failed",
       };
     }
-    const total = (data as { total?: number }).total;
-    if (total != null && total >= 0) return { state: "online" };
-    return { state: "online" };
+    if ((data as { online?: boolean }).online) {
+      return { state: "online" };
+    }
+    return {
+      state: "offline",
+      error: (data as { error?: string }).error ?? "Home server offline",
+    };
   } catch (err) {
     return {
       state: "offline",
@@ -100,10 +88,6 @@ export function thumbUrl(_baseUrl: string | null, photo: GalleryPhoto): string {
   return photo.thumbnail;
 }
 
-export function photoUrl(
-  funnelBase: string | null,
-  id: string,
-  token?: string | null
-): string {
-  return resolveMediaUrl(funnelBase ?? null, token ?? null, fullImagePath(id));
+export function photoUrl(_baseUrl: string | null, id: string): string {
+  return proxyMediaUrl(fullImagePath(id));
 }
