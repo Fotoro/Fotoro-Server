@@ -9,7 +9,7 @@ import { PhotoGallery } from "@/components/dashboard/photo-gallery";
 import {
   clearAuth,
   clearProxyCookie,
-  getStoredToken,
+  getValidAccessToken,
   getStoredUser,
   type FotoroUser,
 } from "@/lib/fotoro-session";
@@ -23,15 +23,18 @@ export default function LibraryPage() {
   const { online, refresh } = useServerData();
 
   React.useEffect(() => {
-    const t = getStoredToken();
-    const stored = getStoredUser();
-    if (!t || !stored) {
-      router.replace("/login?callbackUrl=/dashboard/library");
-      return;
+    async function init() {
+      const t = await getValidAccessToken();
+      const stored = getStoredUser();
+      if (!t || !stored) {
+        router.replace("/login?callbackUrl=/dashboard/library");
+        return;
+      }
+      setUser(stored);
+      setToken(t);
+      setLoading(false);
     }
-    setUser(stored);
-    setToken(t);
-    setLoading(false);
+    void init();
   }, [router]);
 
   function handleLogout() {

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { getStoredToken, syncProxyCookie } from "@/lib/fotoro-session";
+import { getValidAccessToken, syncProxyCookie } from "@/lib/fotoro-session";
 import {
   fetchLibraryStats,
   fetchServerDevices,
@@ -39,11 +39,11 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
   const [loading, setLoading] = React.useState(true);
 
   const refresh = React.useCallback(async () => {
-    const t = getStoredToken();
+    const t = await getValidAccessToken();
     setToken(t);
     if (!t) {
       setOnline("offline");
-      setConnectError(null);
+      setConnectError("Session expired — sign in again.");
       setStats(null);
       setDevices([]);
       setLoading(false);

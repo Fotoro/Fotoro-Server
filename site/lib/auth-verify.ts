@@ -18,7 +18,7 @@ export async function verifySupabaseToken(token: string) {
   const url = getSupabaseProjectUrl();
   const { payload } = await jwtVerify(token, getJwks(), {
     issuer: `${url}/auth/v1`,
-    clockTolerance: 60,
+    clockTolerance: 120,
   });
   return payload;
 }
