@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { fetchPhotosPage } from "@/lib/fotoro-server-data";
 import { photoUrl, searchPhotos, type GalleryPhoto } from "@/lib/fotoro-local";
+import { resolveMediaUrl } from "@/lib/fotoro-media-url";
 import { useServerData } from "@/components/dashboard/server-data-provider";
 
 const PAGE_SIZE = 100;
+const EAGER_COUNT = 24;
 
 function mergePhotos(prev: GalleryPhoto[], next: GalleryPhoto[]): GalleryPhoto[] {
   if (next.length === 0) return prev;
@@ -18,41 +20,37 @@ function mergePhotos(prev: GalleryPhoto[], next: GalleryPhoto[]): GalleryPhoto[]
   return added.length === 0 ? prev : [...prev, ...added];
 }
 
-function LazyThumb({ photo }: { photo: GalleryPhoto }) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = React.useState(false);
-
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) setVisible(true);
-      },
-      { rootMargin: "480px" }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
+function LazyThumb({
+  photo,
+  index,
+  funnelBase,
+  token,
+}: {
+  photo: GalleryPhoto;
+  index: number;
+  funnelBase: string | null;
+  token: string;
+}) {
+  const eager = index < EAGER_COUNT;
+  const src = resolveMediaUrl(funnelBase, token, photo.thumbnail);
 
   return (
-    <div ref={ref} className="size-full bg-muted/20">
-      {visible ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={photo.thumbnail}
-          alt=""
-          className="size-full object-cover"
-          loading="lazy"
-          decoding="async"
-        />
-      ) : null}
+    <div className="size-full bg-muted/20">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        className="size-full object-cover"
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
+        fetchPriority={index < 8 ? "high" : "auto"}
+      />
     </div>
   );
 }
 
 export function PhotoGallery() {
-  const { token } = useServerData();
+  const { token, funnelBase } = useServerData();
   const [photos, setPhotos] = React.useState<GalleryPhoto[]>([]);
   const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
@@ -65,7 +63,32 @@ export function PhotoGallery() {
   const pageRef = React.useRef(1);
   const totalRef = React.useRef(0);
   const fetchingRef = React.useRef(false);
+  const prefetchRef = React.useRef<Map<number, GalleryPhoto[]>>(new Map());
   const sentinelRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!funnelBase) return;
+    const link = document.createElement("link");
+    link.rel = "preconnect";
+    link.href = funnelBase;
+    link.crossOrigin = "anonymous";
+    document.head.appendChild(link);
+    return () => {
+      document.head.removeChild(link);
+    };
+  }, [funnelBase]);
+
+  const prefetchPage = React.useCallback(
+    (p: number) => {
+      if (!token || prefetchRef.current.has(p)) return;
+      void fetchPhotosPage(token, p, PAGE_SIZE, totalRef.current)
+        .then((data) => {
+          if (data.photos.length > 0) prefetchRef.current.set(p, data.photos);
+        })
+        .catch(() => {});
+    },
+    [token]
+  );
 
   const loadPage = React.useCallback(
     async (p: number, append: boolean) => {
@@ -75,16 +98,34 @@ export function PhotoGallery() {
       else setLoading(true);
       setError(null);
       try {
-        const data = await fetchPhotosPage(
-          token,
-          p,
-          PAGE_SIZE,
-          append ? totalRef.current : undefined
-        );
+        const cached = append ? prefetchRef.current.get(p) : undefined;
+        if (cached) prefetchRef.current.delete(p);
+
+        const data = cached
+          ? {
+              photos: cached,
+              total: totalRef.current,
+              page: p,
+              limit: PAGE_SIZE,
+              count: cached.length,
+            }
+          : await fetchPhotosPage(
+              token,
+              p,
+              PAGE_SIZE,
+              append ? totalRef.current : undefined
+            );
+
         totalRef.current = data.total;
         pageRef.current = p;
         setTotal(data.total);
-        setPhotos((prev) => (append ? mergePhotos(prev, data.photos) : data.photos));
+        setPhotos((prev) => {
+          const merged = append ? mergePhotos(prev, data.photos) : data.photos;
+          if (merged.length < data.total && data.photos.length === PAGE_SIZE) {
+            prefetchPage(p + 1);
+          }
+          return merged;
+        });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Failed to load photos";
         setError(msg);
@@ -100,7 +141,7 @@ export function PhotoGallery() {
         fetchingRef.current = false;
       }
     },
-    [token]
+    [token, prefetchPage]
   );
 
   const loadMore = React.useCallback(() => {
@@ -113,8 +154,9 @@ export function PhotoGallery() {
     if (!token) return;
     pageRef.current = 1;
     totalRef.current = 0;
+    prefetchRef.current.clear();
     void loadPage(1, false);
-  }, [token, loadPage]);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   React.useEffect(() => {
     if (query || loading) return;
@@ -125,7 +167,7 @@ export function PhotoGallery() {
       (entries) => {
         if (entries[0]?.isIntersecting) loadMore();
       },
-      { rootMargin: "600px" }
+      { rootMargin: "800px" }
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -134,6 +176,7 @@ export function PhotoGallery() {
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!token) return;
+    prefetchRef.current.clear();
     if (!query.trim()) {
       pageRef.current = 1;
       void loadPage(1, false);
@@ -184,6 +227,7 @@ export function PhotoGallery() {
             onClick={() => {
               setQuery("");
               pageRef.current = 1;
+              prefetchRef.current.clear();
               void loadPage(1, false);
             }}
           >
@@ -215,14 +259,19 @@ export function PhotoGallery() {
           ) : (
             <>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-                {photos.map((photo) => (
+                {photos.map((photo, index) => (
                   <button
                     key={photo.id}
                     type="button"
                     className="aspect-square overflow-hidden rounded-md border border-border bg-muted/30 transition hover:border-foreground/30"
                     onClick={() => setSelected(photo)}
                   >
-                    <LazyThumb photo={photo} />
+                    <LazyThumb
+                      photo={photo}
+                      index={index}
+                      funnelBase={funnelBase}
+                      token={token}
+                    />
                   </button>
                 ))}
               </div>
@@ -241,6 +290,7 @@ export function PhotoGallery() {
 
               <p className="py-3 text-center text-[11px] text-muted-foreground">
                 {photos.length.toLocaleString()} of {total.toLocaleString()} photos
+                {funnelBase ? " · direct" : " · proxied"}
               </p>
             </>
           )}
@@ -248,7 +298,7 @@ export function PhotoGallery() {
       </div>
 
       <AnimatePresence>
-        {selected ? (
+        {selected && token ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -262,7 +312,10 @@ export function PhotoGallery() {
               className="flex max-h-[92vh] max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-card"
               onClick={(e) => e.stopPropagation()}
             >
-              <AuthenticatedImage src={photoUrl(null, selected.id)} alt="" />
+              <AuthenticatedImage
+                src={photoUrl(funnelBase, selected.id, token)}
+                alt=""
+              />
               <div className="border-t border-border px-4 py-3 text-sm">
                 <p className="font-medium text-foreground">
                   {selected.caption?.trim() || "No description"}
@@ -296,6 +349,7 @@ function AuthenticatedImage({ src, alt }: { src: string; alt: string }) {
       src={src}
       alt={alt}
       className="max-h-[min(60vh,520px)] w-full object-contain"
+      decoding="async"
       onError={() => setFailed(true)}
     />
   );

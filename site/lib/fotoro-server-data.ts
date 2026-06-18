@@ -1,4 +1,5 @@
 import type { GalleryPhoto } from "@/lib/fotoro-local";
+import { gridThumbPath, GRID_THUMB_SIZE } from "@/lib/fotoro-media-url";
 
 export const TBE = "TBE";
 
@@ -70,19 +71,12 @@ async function proxyGet<T>(path: string, token: string): Promise<T> {
   return data as T;
 }
 
-/** Same medium thumb path the Qt desktop uses, via Vercel proxy. */
-export function thumbProxyUrl(hash: string, thumbnail?: string): string {
-  let path = thumbnail?.startsWith("/")
-    ? thumbnail.replace("size=small", "size=medium")
-    : `/api/thumbnail/${hash}?size=medium`;
-  if (!path.includes("size=")) {
-    path += (path.includes("?") ? "&" : "?") + "size=medium";
+/** Relative API path — resolve to direct funnel or proxy at render time. */
+export function thumbApiPath(hash: string, thumbnail?: string): string {
+  if (thumbnail?.startsWith("/api/thumbnail/")) {
+    return thumbnail.replace("size=medium", `size=${GRID_THUMB_SIZE}`);
   }
-  return `/api/fotoro/${path.replace(/^\//, "")}`;
-}
-
-export function fullImageProxyUrl(hash: string): string {
-  return `/api/fotoro/api/image/${hash}`;
+  return gridThumbPath(hash);
 }
 
 function mapApiImage(row: ApiImageRow): GalleryPhoto {
@@ -90,7 +84,7 @@ function mapApiImage(row: ApiImageRow): GalleryPhoto {
     id: row.hash,
     caption: row.caption,
     category: row.category,
-    thumbnail: thumbProxyUrl(row.hash, row.thumbnail),
+    thumbnail: thumbApiPath(row.hash, row.thumbnail),
   };
 }
 

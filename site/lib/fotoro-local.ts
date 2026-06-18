@@ -5,9 +5,9 @@
 
 import {
   fetchPhotosPage,
-  fullImageProxyUrl,
   searchPhotosApi,
 } from "@/lib/fotoro-server-data";
+import { fullImagePath, resolveMediaUrl } from "@/lib/fotoro-media-url";
 
 export type ConnectivityState = "checking" | "online" | "offline" | "syncing";
 
@@ -100,6 +100,10 @@ export function thumbUrl(_baseUrl: string | null, photo: GalleryPhoto): string {
   return photo.thumbnail;
 }
 
-export function photoUrl(_baseUrl: string | null, id: string): string {
-  return fullImageProxyUrl(id);
+export function photoUrl(
+  funnelBase: string | null,
+  id: string,
+  token?: string | null
+): string {
+  return resolveMediaUrl(funnelBase ?? null, token ?? null, fullImagePath(id));
 }
