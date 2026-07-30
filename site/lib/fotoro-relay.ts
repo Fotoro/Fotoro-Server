@@ -3,6 +3,11 @@ import { getNodeBaseUrl } from "@/lib/fotoro-url";
 
 /** Server-side only — funnel URL never sent to the browser. */
 export async function getRelayBaseUrlForUser(userId: string): Promise<string> {
+  const localServer = process.env.FOTORO_LOCAL_SERVER_URL?.trim();
+  if (localServer && process.env.NODE_ENV !== "production") {
+    return localServer;
+  }
+
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("nodes")

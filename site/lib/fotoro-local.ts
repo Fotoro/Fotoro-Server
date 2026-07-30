@@ -15,6 +15,7 @@ export interface GalleryPhoto {
   id: string;
   caption: string;
   category: string;
+  added_at?: string;
   taken_at?: string;
   thumbnail: string;
 }

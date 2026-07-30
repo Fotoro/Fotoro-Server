@@ -39,6 +39,8 @@ interface ApiImageRow {
   caption: string;
   category: string;
   thumbnail: string;
+  added_at?: string;
+  taken_at?: string;
 }
 
 interface ApiStats {
@@ -85,6 +87,8 @@ function mapApiImage(row: ApiImageRow): GalleryPhoto {
     id: row.hash,
     caption: row.caption,
     category: row.category,
+    added_at: row.added_at,
+    taken_at: row.taken_at,
     thumbnail: proxyMediaUrl(apiPath),
   };
 }

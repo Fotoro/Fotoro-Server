@@ -37,7 +37,14 @@ function LazyThumb({ photo, index }: { photo: GalleryPhoto; index: number }) {
   );
 }
 
-export function PhotoGallery() {
+export interface PhotoGalleryHandle {
+  refresh: () => void;
+}
+
+export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoGallery(
+  _props,
+  ref
+) {
   const { token, connectError } = useServerData();
   const [photos, setPhotos] = React.useState<GalleryPhoto[]>([]);
   const [total, setTotal] = React.useState(0);
@@ -133,6 +140,19 @@ export function PhotoGallery() {
     prefetchRef.current.clear();
     void loadPage(1, false);
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      refresh: () => {
+        pageRef.current = 1;
+        totalRef.current = 0;
+        prefetchRef.current.clear();
+        void loadPage(1, false);
+      },
+    }),
+    [loadPage]
+  );
 
   React.useEffect(() => {
     if (query || loading) return;
@@ -298,7 +318,7 @@ export function PhotoGallery() {
       </AnimatePresence>
     </div>
   );
-}
+});
 
 function AuthenticatedImage({ src, alt }: { src: string; alt: string }) {
   const [failed, setFailed] = React.useState(false);

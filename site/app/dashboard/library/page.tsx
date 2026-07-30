@@ -5,22 +5,27 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import { ConnectivityBadge } from "@/components/dashboard/connectivity-badge";
-import { PhotoGallery } from "@/components/dashboard/photo-gallery";
+import { PhotoGallery, type PhotoGalleryHandle } from "@/components/dashboard/photo-gallery";
+import { UploadZone } from "@/components/dashboard/upload-zone";
 import {
   clearAuth,
   clearProxyCookie,
   getValidAccessToken,
   getStoredUser,
+  syncProxyCookie,
   type FotoroUser,
 } from "@/lib/fotoro-session";
 import { useServerData } from "@/components/dashboard/server-data-provider";
+import type { NodePublic } from "@/lib/fotoro-local";
 
 export default function LibraryPage() {
   const router = useRouter();
   const [user, setUser] = React.useState<FotoroUser | null>(null);
   const [token, setToken] = React.useState<string | null>(null);
+  const [node, setNode] = React.useState<NodePublic | null>(null);
   const [loading, setLoading] = React.useState(true);
   const { online, refresh } = useServerData();
+  const galleryRef = React.useRef<PhotoGalleryHandle>(null);
 
   React.useEffect(() => {
     async function init() {
@@ -32,10 +37,24 @@ export default function LibraryPage() {
       }
       setUser(stored);
       setToken(t);
+      await syncProxyCookie(t);
+      void fetchNode(t);
       setLoading(false);
     }
     void init();
   }, [router]);
+
+  async function fetchNode(supabaseToken: string) {
+    try {
+      const res = await fetch("/api/nodes", {
+        headers: { Authorization: `Bearer ${supabaseToken}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      setNode(data.node ?? null);
+    } catch {
+      setNode(null);
+    }
+  }
 
   function handleLogout() {
     clearAuth();
@@ -77,7 +96,19 @@ export default function LibraryPage() {
           <ConnectivityBadge state={connState} onRefresh={refresh} />
         </div>
 
-        <PhotoGallery />
+        <div className="grid min-h-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <PhotoGallery ref={galleryRef} />
+          {online === "online" && node ? (
+            <UploadZone
+              node={node}
+              supabaseToken={token}
+              onUploaded={() => {
+                void refresh();
+                galleryRef.current?.refresh();
+              }}
+            />
+          ) : null}
+        </div>
       </motion.main>
     </>
   );
