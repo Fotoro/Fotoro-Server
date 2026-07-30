@@ -21,7 +21,13 @@ export async function getRelayBaseUrlForUser(userId: string): Promise<string> {
   if (!data) throw new Error("No server registered — run ./fotoro setup");
 
   const base = getNodeBaseUrl(data);
-  if (!base) throw new Error("No relay configured — run ./fotoro server");
+  if (!base) {
+    throw new Error(
+      process.env.NODE_ENV === "production"
+        ? "No public Funnel URL configured — run sudo tailscale funnel --bg 8765, set FOTORO_WEB_URL to this Vercel site, then run ./fotoro nodesync"
+        : "No relay configured — run ./fotoro server"
+    );
+  }
   return base;
 }
 

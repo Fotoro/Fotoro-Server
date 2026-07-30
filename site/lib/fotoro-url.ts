@@ -22,10 +22,17 @@ export function getNodeBaseUrl(node: {
   tailnet_url?: string | null;
   magic_dns?: string | null;
 }): string | null {
-  const raw =
-    node.public_url ||
-    node.tailnet_url ||
-    (node.magic_dns ? `https://${node.magic_dns}` : "");
+  let raw = node.public_url ?? "";
+  const allowTailnet =
+    process.env.NODE_ENV !== "production" ||
+    process.env.FOTORO_ALLOW_TAILNET_RELAY === "1";
+
+  if (!raw && allowTailnet) {
+    raw =
+      node.tailnet_url ||
+      (node.magic_dns ? `https://${node.magic_dns}` : "");
+  }
+
   if (!raw) return null;
   return normalizeFotoroServerUrl(raw);
 }
