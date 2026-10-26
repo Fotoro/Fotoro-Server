@@ -11,6 +11,17 @@ import { useServerData } from "@/components/dashboard/server-data-provider";
 
 const PAGE_SIZE = 100;
 const EAGER_COUNT = 24;
+const GRID_GAP = 8;
+const HEADER_HEIGHT = 36;
+
+type TimelineItem = { photo: GalleryPhoto; index: number };
+type TimelineRow = {
+  key: string;
+  top: number;
+  height: number;
+  month?: string;
+  items?: TimelineItem[];
+};
 
 function mergePhotos(prev: GalleryPhoto[], next: GalleryPhoto[]): GalleryPhoto[] {
   if (next.length === 0) return prev;
@@ -44,7 +55,7 @@ function LazyThumb({ photo, index }: { photo: GalleryPhoto; index: number }) {
 }
 
 function timelineGroups(photos: GalleryPhoto[]) {
-  const groups = new Map<string, { photo: GalleryPhoto; index: number }[]>();
+  const groups = new Map<string, TimelineItem[]>();
   photos.forEach((photo, index) => {
     const value = photo.taken_at ?? photo.added_at ?? "";
     const month = /^\d{4}-\d{2}/.test(value) ? value.slice(0, 7) : "Unknown date";
@@ -53,6 +64,42 @@ function timelineGroups(photos: GalleryPhoto[]) {
     groups.set(month, group);
   });
   return [...groups.entries()];
+}
+
+function buildTimelineRows(photos: GalleryPhoto[], columns: number, width: number) {
+  const rows: TimelineRow[] = [];
+  const tileHeight = Math.max(60, (width - GRID_GAP * (columns - 1)) / columns);
+  let top = 0;
+  for (const [month, items] of timelineGroups(photos)) {
+    rows.push({ key: `month:${month}`, top, height: HEADER_HEIGHT, month });
+    top += HEADER_HEIGHT;
+    for (let start = 0; start < items.length; start += columns) {
+      rows.push({
+        key: `row:${month}:${start}`,
+        top,
+        height: tileHeight + GRID_GAP,
+        items: items.slice(start, start + columns),
+      });
+      top += tileHeight + GRID_GAP;
+    }
+  }
+  return { rows, height: top };
+}
+
+function visibleTimelineRows(rows: TimelineRow[], scrollTop: number, viewportHeight: number) {
+  const overscan = Math.max(600, viewportHeight);
+  const start = Math.max(0, scrollTop - overscan);
+  const end = scrollTop + viewportHeight + overscan;
+  let low = 0;
+  let high = rows.length;
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    if (rows[mid].top + rows[mid].height < start) low = mid + 1;
+    else high = mid;
+  }
+  const visible: TimelineRow[] = [];
+  for (let i = low; i < rows.length && rows[i].top < end; i++) visible.push(rows[i]);
+  return visible;
 }
 
 export interface PhotoGalleryHandle {
@@ -72,12 +119,44 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
   const [query, setQuery] = React.useState("");
   const [searching, setSearching] = React.useState(false);
   const [selected, setSelected] = React.useState<GalleryPhoto | null>(null);
+  const [viewportWidth, setViewportWidth] = React.useState(720);
+  const [viewportHeight, setViewportHeight] = React.useState(720);
+  const [scrollTop, setScrollTop] = React.useState(0);
 
   const pageRef = React.useRef(1);
   const totalRef = React.useRef(0);
   const fetchingRef = React.useRef(false);
   const prefetchRef = React.useRef<Map<number, GalleryPhoto[]>>(new Map());
   const sentinelRef = React.useRef<HTMLDivElement>(null);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const scrollFrameRef = React.useRef<number | null>(null);
+  const latestScrollTopRef = React.useRef(0);
+
+  React.useEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    const updateSize = () => {
+      setViewportWidth(Math.max(200, element.clientWidth - 24));
+      setViewportHeight(element.clientHeight);
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
+    };
+  }, [token]);
+
+  const columns = Math.max(3, Math.min(8, Math.floor((viewportWidth + GRID_GAP) / 120)));
+  const timeline = React.useMemo(
+    () => buildTimelineRows(photos, columns, viewportWidth),
+    [photos, columns, viewportWidth]
+  );
+  const visibleRows = React.useMemo(
+    () => visibleTimelineRows(timeline.rows, scrollTop, viewportHeight),
+    [timeline.rows, scrollTop, viewportHeight]
+  );
 
   const prefetchPage = React.useCallback(
     (p: number) => {
@@ -181,7 +260,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
       (entries) => {
         if (entries[0]?.isIntersecting) loadMore();
       },
-      { rootMargin: "800px" }
+      { root: scrollRef.current, rootMargin: "800px" }
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -258,7 +337,18 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
       ) : null}
 
       <div className="min-h-0 flex-1 rounded-xl border border-border bg-card/40 ring-soft">
-        <div className="h-[min(70vh,720px)] overflow-y-auto overscroll-contain p-3">
+        <div
+          ref={scrollRef}
+          className="h-[min(70vh,720px)] overflow-y-auto overscroll-contain p-3"
+          onScroll={(event) => {
+            latestScrollTopRef.current = event.currentTarget.scrollTop;
+            if (scrollFrameRef.current !== null) return;
+            scrollFrameRef.current = requestAnimationFrame(() => {
+              setScrollTop(latestScrollTopRef.current);
+              scrollFrameRef.current = null;
+            });
+          }}
+        >
           {loading ? (
             <div className="flex h-full min-h-[240px] items-center justify-center text-muted-foreground">
               <Loader2 className="mr-2 size-5 animate-spin" />
@@ -273,25 +363,27 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
             </div>
           ) : (
             <>
-              {timelineGroups(photos).map(([month, items]) => (
-                <section key={month} className="mb-5">
-                  <h3 className="mb-2 px-1 text-sm font-medium text-foreground">
-                    {month === "Unknown date" ? month : new Date(`${month}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+              <div className="relative" style={{ height: timeline.height }}>
+                {visibleRows.map((row) => row.month ? (
+                  <h3 key={row.key} className="absolute inset-x-0 px-1 text-sm font-medium text-foreground" style={{ top: row.top, height: row.height }}>
+                    {row.month === "Unknown date" ? row.month : new Date(`${row.month}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
                   </h3>
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-                    {items.map(({ photo, index }) => (
+                ) : (
+                  <div key={row.key} className="absolute inset-x-0 grid gap-2" style={{ top: row.top, gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+                    {row.items?.map(({ photo, index }) => (
                       <button
                         key={photo.id}
                         type="button"
                         className="aspect-square overflow-hidden rounded-md border border-border bg-muted/30 transition hover:border-foreground/30"
                         onClick={() => setSelected(photo)}
+                        aria-label={`Open ${photo.caption || photo.category || "media"}`}
                       >
                         <LazyThumb photo={photo} index={index} />
                       </button>
                     ))}
                   </div>
-                </section>
-              ))}
+                ))}
+              </div>
 
               <div ref={sentinelRef} className="h-2 w-full" aria-hidden />
 
