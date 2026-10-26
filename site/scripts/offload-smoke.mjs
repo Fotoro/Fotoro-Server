@@ -11,9 +11,11 @@ const filename = process.argv[2];
 const origin = (process.env.FOTORO_TEST_ORIGIN || "http://127.0.0.1:3000").replace(/\/$/, "");
 const token = process.env.FOTORO_TEST_TOKEN;
 const requireBackup = process.argv.includes("--require-backup");
+const direct = process.argv.includes("--direct");
 
-if (!filename || !token) {
-  console.error("Usage: FOTORO_TEST_TOKEN=<owner Supabase access token> node scripts/offload-smoke.mjs <disposable-image> [--require-backup]");
+if (!filename || (!token && !direct)) {
+  console.error("Usage: FOTORO_TEST_TOKEN=<owner access token> node scripts/offload-smoke.mjs <disposable-image> [--require-backup]");
+  console.error("       node scripts/offload-smoke.mjs <disposable-image> --direct   # isolated local auth-bypass fixture only");
   process.exit(2);
 }
 
@@ -30,8 +32,9 @@ const mime = ext === "png" ? "image/png" : "image/jpeg";
 
 async function request(path, init = {}) {
   const headers = new Headers(init.headers);
-  headers.set("Authorization", `Bearer ${token}`);
-  const response = await fetch(`${origin}/api/fotoro${path}`, { ...init, headers, redirect: "manual" });
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const prefix = direct ? "" : "/api/fotoro";
+  const response = await fetch(`${origin}${prefix}${path}`, { ...init, headers, redirect: "manual" });
   if (!response.ok) {
     const body = await response.text();
     throw new Error(`${init.method || "GET"} ${path}: HTTP ${response.status}: ${body.slice(0, 240)}`);
@@ -41,7 +44,9 @@ async function request(path, init = {}) {
 
 const me = await (await request("/api/v1/me")).json();
 assert.equal(me.api_version, "v1");
-console.log("Owner authorization: passed");
+console.log(direct
+  ? "Direct fixture mode: loopback API reached; signed-in owner authorization was not checked."
+  : "Owner authorization: passed");
 
 const created = await request("/api/v1/uploads", {
   method: "POST",
