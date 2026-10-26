@@ -88,9 +88,9 @@ export default function LibraryPage() {
             <p className="text-xs uppercase tracking-wider text-muted-foreground">
               Media library
             </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Your photos</h1>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Your media</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Loaded via secure relay — your server address stays private.
+              Your timeline is loaded from your Fotoro server.
             </p>
           </div>
           <ConnectivityBadge state={connState} onRefresh={refresh} />

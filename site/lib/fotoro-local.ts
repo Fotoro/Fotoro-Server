@@ -18,6 +18,8 @@ export interface GalleryPhoto {
   added_at?: string;
   taken_at?: string;
   thumbnail: string;
+  media_kind?: string;
+  safe_to_delete?: boolean;
 }
 
 export interface NodePublic {
@@ -38,7 +40,7 @@ function authHeaders(supabaseToken: string): HeadersInit {
 export async function checkServerStatus(
   _baseUrl: string | null,
   supabaseToken: string
-): Promise<{ state: ConnectivityState; error?: string }> {
+): Promise<{ state: ConnectivityState; error?: string; code?: string; stage?: string }> {
   try {
     const res = await fetch("/api/connectivity", {
       headers: authHeaders(supabaseToken),
@@ -49,6 +51,8 @@ export async function checkServerStatus(
       return {
         state: "offline",
         error: (data as { error?: string }).error ?? "Relay check failed",
+        code: (data as { code?: string }).code,
+        stage: (data as { stage?: string }).stage,
       };
     }
     if ((data as { online?: boolean }).online) {
@@ -57,6 +61,8 @@ export async function checkServerStatus(
     return {
       state: "offline",
       error: (data as { error?: string }).error ?? "Home server offline",
+      code: (data as { code?: string }).code,
+      stage: (data as { stage?: string }).stage,
     };
   } catch (err) {
     return {

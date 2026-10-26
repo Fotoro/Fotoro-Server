@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ImageIcon, Loader2, Search, X } from "lucide-react";
+import { Film, ImageIcon, Loader2, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { fetchPhotosPage } from "@/lib/fotoro-server-data";
@@ -24,17 +24,35 @@ function LazyThumb({ photo, index }: { photo: GalleryPhoto; index: number }) {
 
   return (
     <div className="size-full bg-muted/20">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={photo.thumbnail}
-        alt=""
-        className="size-full object-cover"
-        loading={eager ? "eager" : "lazy"}
-        decoding="async"
-        fetchPriority={index < 8 ? "high" : "auto"}
-      />
+      {photo.thumbnail ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={photo.thumbnail}
+          alt=""
+          className="size-full object-cover"
+          loading={eager ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={index < 8 ? "high" : "auto"}
+        />
+      ) : (
+        <div className="flex size-full items-center justify-center text-muted-foreground">
+          {photo.media_kind === "video" ? <Film className="size-7" /> : <ImageIcon className="size-7" />}
+        </div>
+      )}
     </div>
   );
+}
+
+function timelineGroups(photos: GalleryPhoto[]) {
+  const groups = new Map<string, { photo: GalleryPhoto; index: number }[]>();
+  photos.forEach((photo, index) => {
+    const value = photo.taken_at ?? photo.added_at ?? "";
+    const month = /^\d{4}-\d{2}/.test(value) ? value.slice(0, 7) : "Unknown date";
+    const group = groups.get(month) ?? [];
+    group.push({ photo, index });
+    groups.set(month, group);
+  });
+  return [...groups.entries()];
 }
 
 export interface PhotoGalleryHandle {
@@ -255,18 +273,25 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-                {photos.map((photo, index) => (
-                  <button
-                    key={photo.id}
-                    type="button"
-                    className="aspect-square overflow-hidden rounded-md border border-border bg-muted/30 transition hover:border-foreground/30"
-                    onClick={() => setSelected(photo)}
-                  >
-                    <LazyThumb photo={photo} index={index} />
-                  </button>
-                ))}
-              </div>
+              {timelineGroups(photos).map(([month, items]) => (
+                <section key={month} className="mb-5">
+                  <h3 className="mb-2 px-1 text-sm font-medium text-foreground">
+                    {month === "Unknown date" ? month : new Date(`${month}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+                    {items.map(({ photo, index }) => (
+                      <button
+                        key={photo.id}
+                        type="button"
+                        className="aspect-square overflow-hidden rounded-md border border-border bg-muted/30 transition hover:border-foreground/30"
+                        onClick={() => setSelected(photo)}
+                      >
+                        <LazyThumb photo={photo} index={index} />
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ))}
 
               <div ref={sentinelRef} className="h-2 w-full" aria-hidden />
 
@@ -281,7 +306,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
               ) : null}
 
               <p className="py-3 text-center text-[11px] text-muted-foreground">
-                {photos.length.toLocaleString()} of {total.toLocaleString()} photos · secure relay
+                {photos.length.toLocaleString()} of {total.toLocaleString()} items · your server
               </p>
             </>
           )}
@@ -303,13 +328,22 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
               className="flex max-h-[92vh] max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-card"
               onClick={(e) => e.stopPropagation()}
             >
-              <AuthenticatedImage src={photoUrl(null, selected.id)} alt="" />
+              {selected.media_kind === "video" ? (
+                <video src={photoUrl(null, selected.id)} controls preload="metadata" className="max-h-[min(60vh,520px)] w-full" />
+              ) : (
+                <AuthenticatedImage key={selected.id} src={photoUrl(null, selected.id)} preview={selected.thumbnail.replace("size=small", "size=medium")} alt="" />
+              )}
               <div className="border-t border-border px-4 py-3 text-sm">
                 <p className="font-medium text-foreground">
                   {selected.caption?.trim() || "No description"}
                 </p>
                 {selected.category ? (
                   <p className="mt-1 text-xs text-muted-foreground">{selected.category}</p>
+                ) : null}
+                {selected.safe_to_delete !== undefined ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {selected.safe_to_delete ? "Two copies verified · safe to delete from phone" : "Backup incomplete · keep the phone copy"}
+                  </p>
                 ) : null}
               </div>
             </motion.div>
@@ -320,8 +354,9 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
   );
 });
 
-function AuthenticatedImage({ src, alt }: { src: string; alt: string }) {
+function AuthenticatedImage({ src, preview, alt }: { src: string; preview: string; alt: string }) {
   const [failed, setFailed] = React.useState(false);
+  const [loaded, setLoaded] = React.useState(false);
 
   if (failed) {
     return (
@@ -332,13 +367,20 @@ function AuthenticatedImage({ src, alt }: { src: string; alt: string }) {
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={alt}
-      className="max-h-[min(60vh,520px)] w-full object-contain"
-      decoding="async"
-      onError={() => setFailed(true)}
-    />
+    <div className="relative flex min-h-[240px] items-center justify-center bg-black/20">
+      {preview && !loaded ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={preview} alt="" className="absolute inset-0 size-full object-contain blur-sm" />
+      ) : null}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        className="relative max-h-[min(60vh,520px)] w-full object-contain"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={() => setFailed(true)}
+      />
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { GalleryPhoto } from "@/lib/fotoro-local";
-import { gridThumbPath, GRID_THUMB_SIZE, proxyMediaUrl } from "@/lib/fotoro-media-url";
+import { gridThumbPath, proxyMediaUrl } from "@/lib/fotoro-media-url";
 
 export const TBE = "TBE";
 
@@ -41,6 +41,23 @@ interface ApiImageRow {
   thumbnail: string;
   added_at?: string;
   taken_at?: string;
+}
+
+interface ApiMediaRow {
+  id: string;
+  sha256: string;
+  media_kind: string;
+  captured_at?: string;
+  imported_at: string;
+  thumbnail_url?: string;
+  safe_to_delete: boolean;
+}
+
+interface ApiMediaPage {
+  media: ApiMediaRow[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 interface ApiStats {
@@ -91,6 +108,19 @@ function mapApiImage(row: ApiImageRow): GalleryPhoto {
   };
 }
 
+function mapApiMedia(row: ApiMediaRow): GalleryPhoto {
+  return {
+    id: row.id,
+    caption: "",
+    category: row.media_kind,
+    media_kind: row.media_kind,
+    taken_at: row.captured_at ?? row.imported_at,
+    added_at: row.imported_at,
+    thumbnail: row.thumbnail_url ? proxyMediaUrl(row.thumbnail_url) : "",
+    safe_to_delete: row.safe_to_delete,
+  };
+}
+
 export async function fetchLibraryStats(token: string): Promise<ServerLibraryStats | null> {
   try {
     const data = await proxyGet<ApiStats>("api/stats", token);
@@ -134,30 +164,20 @@ export async function fetchServerDevices(token: string): Promise<ServerDevice[]>
   }
 }
 
-/** Paginated gallery — mirrors desktop GET /api/images?page=N&per_page=50 */
+/** Paginated gallery from the canonical media catalogue. */
 export async function fetchPhotosPage(
   token: string,
   page = 1,
   limit = 100,
   knownTotal?: number
 ): Promise<PhotosPage> {
-  const rows = await proxyGet<ApiImageRow[]>(
-    `api/images?page=${page}&per_page=${limit}`,
-    token
-  );
-  const list = Array.isArray(rows) ? rows : [];
-
-  let total = knownTotal ?? 0;
-  if (total <= 0) {
-    const stats = await proxyGet<ApiStats>("api/stats", token).catch(
-      () => ({ total: 0 } as ApiStats)
-    );
-    total = stats.total ?? list.length;
-  }
+  void knownTotal;
+  const data = await proxyGet<ApiMediaPage>(`api/v1/media?page=${page}&limit=${limit}`, token);
+  const list = Array.isArray(data.media) ? data.media : [];
 
   return {
-    photos: list.map(mapApiImage),
-    total,
+    photos: list.map(mapApiMedia),
+    total: data.total,
     page,
     limit,
     count: list.length,

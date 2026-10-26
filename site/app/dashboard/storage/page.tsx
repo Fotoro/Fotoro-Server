@@ -7,11 +7,51 @@ import { clearAuth, clearProxyCookie, getStoredUser, type FotoroUser } from "@/l
 import { useServerData } from "@/components/dashboard/server-data-provider";
 import { formatBytes, formatCount, TBE } from "@/lib/fotoro-server-data";
 
+type BackupStatus = {
+  configured: boolean;
+  available: boolean;
+  error?: string;
+  unverified_primary: number;
+  missing_primary: number;
+  corrupt_primary: number;
+  pending: number;
+  verified: number;
+  failed: number;
+};
+
 export default function StoragePage() {
   const router = useRouter();
   const [user, setUser] = React.useState<FotoroUser | null>(null);
-  const { stats, online } = useServerData();
+  const { stats, online, token } = useServerData();
+  const [backup, setBackup] = React.useState<BackupStatus | null>(null);
+  const [syncing, setSyncing] = React.useState(false);
   const live = online === "online" && stats;
+
+  const refreshBackup = React.useCallback(async () => {
+    if (!token || online !== "online") return;
+    const res = await fetch("/api/fotoro/api/v1/storage", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setBackup((await res.json()) as BackupStatus);
+  }, [token, online]);
+
+  React.useEffect(() => {
+    void refreshBackup();
+  }, [refreshBackup]);
+
+  async function syncBackup() {
+    if (!token) return;
+    setSyncing(true);
+    try {
+      await fetch("/api/fotoro/api/v1/storage/sync", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      await refreshBackup();
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   React.useEffect(() => {
     if (!getStoredUser()) router.replace("/login?callbackUrl=/dashboard/storage");
@@ -23,7 +63,7 @@ export default function StoragePage() {
   const rows = [
     { label: "Photos indexed", value: live ? formatCount(stats.photos_total) : TBE },
     { label: "Medium thumbnails", value: live ? formatCount(stats.thumbnails_medium) : TBE },
-    { label: "Library storage", value: live ? formatBytes(stats.storage_used_bytes) : TBE },
+    { label: "Cache and staging", value: live ? formatBytes(stats.storage_used_bytes) : TBE },
     { label: "Disk total", value: live && stats.disk_total_bytes ? formatBytes(stats.disk_total_bytes) : TBE },
     { label: "Disk free", value: live && stats.disk_free_bytes ? formatBytes(stats.disk_free_bytes) : TBE },
     { label: "Failed imports", value: live ? formatCount(stats.photos_failed) : TBE },
@@ -50,6 +90,26 @@ export default function StoragePage() {
             </div>
           ))}
         </dl>
+        <div className="mt-8 rounded-xl border border-border bg-card p-5 ring-soft">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-medium">Automatic backup</h2>
+            <button type="button" onClick={() => void syncBackup()} disabled={!backup?.available || syncing}
+              className="rounded-md border border-border px-3 py-1.5 text-xs disabled:opacity-50">
+              {syncing ? "Checking…" : "Back up pending now"}
+            </button>
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {!backup ? "Checking storage…" : backup.available
+              ? `${backup.verified.toLocaleString()} items verified on a second storage target; ${backup.pending.toLocaleString()} awaiting copy; ${backup.unverified_primary.toLocaleString()} originals awaiting verification.`
+              : backup.configured ? backup.error : "No independent backup target configured. Keep phone originals."}
+          </p>
+          {backup?.failed ? <p className="mt-2 text-xs text-destructive-foreground">{backup.failed} backup items need repair.</p> : null}
+          {backup && (backup.missing_primary || backup.corrupt_primary) ? (
+            <p className="mt-2 text-xs text-destructive-foreground">
+              {backup.missing_primary} originals unavailable; {backup.corrupt_primary} failed checksum verification.
+            </p>
+          ) : null}
+        </div>
       </main>
     </>
   );
