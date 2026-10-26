@@ -3,7 +3,7 @@ import { verifySupabaseToken } from "@/lib/auth-verify";
 import { FOTORO_PROXY_COOKIE } from "@/lib/fotoro-proxy-cookie";
 import { getRelayBaseUrlForUser, sanitizeRelayError } from "@/lib/fotoro-relay";
 
-/** Server-side proxy to your home server via Tailscale funnel — URL never exposed to browser. */
+/** Server-side proxy to the account's private home server. */
 async function proxyToRelay(
   request: NextRequest,
   path: string,
@@ -19,16 +19,21 @@ async function proxyToRelay(
 
   const contentType = request.headers.get("content-type");
   if (contentType) headers.set("Content-Type", contentType);
+  for (const name of ["upload-offset", "range", "if-range", "if-none-match", "if-modified-since"]) {
+    const value = request.headers.get(name);
+    if (value) headers.set(name, value);
+  }
 
   const init: RequestInit = {
     method: request.method,
     headers,
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(300_000),
+    redirect: "manual",
   };
 
-  if (request.method === "POST" || request.method === "PUT") {
+  if (["POST", "PUT", "PATCH"].includes(request.method)) {
     const ct = request.headers.get("content-type") ?? "";
-    if (ct.includes("multipart/form-data")) {
+    if (ct.includes("multipart/form-data") || request.method === "PATCH") {
       init.body = await request.arrayBuffer();
     } else {
       init.body = await request.text();
@@ -58,13 +63,17 @@ async function proxyToRelay(
   } else if (upstreamType?.startsWith("image/")) {
     respHeaders.set("Cache-Control", "private, max-age=86400");
   }
+  for (const name of ["upload-offset", "upload-length", "location", "accept-ranges", "content-range", "etag", "last-modified"]) {
+    const value = upstream.headers.get(name);
+    if (value) respHeaders.set(name, value);
+  }
 
   if (upstreamType?.includes("application/json")) {
     const body = await upstream.text();
     return new NextResponse(body, { status: upstream.status, headers: respHeaders });
   }
 
-  return new NextResponse(upstream.body, {
+  return new NextResponse(request.method === "HEAD" ? null : upstream.body, {
     status: upstream.status,
     headers: respHeaders,
   });
@@ -81,6 +90,18 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
+  return handleProxy(request, context);
+}
+
+export async function HEAD(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  return handleProxy(request, context);
+}
+
+export async function PATCH(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  return handleProxy(request, context);
+}
+
+export async function DELETE(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   return handleProxy(request, context);
 }
 
@@ -104,7 +125,10 @@ async function handleProxy(
     const userId = claims.sub as string;
 
     const { path: segments } = await context.params;
-    const path = (segments ?? []).join("/");
+    if (!segments?.length || segments.some((segment) => !segment || segment === "." || segment === ".." || segment.includes("/"))) {
+      return NextResponse.json({ error: "Invalid API path" }, { status: 400 });
+    }
+    const path = segments.map((segment) => encodeURIComponent(segment)).join("/");
 
     return proxyToRelay(request, path, userId, bearer);
   } catch (error) {

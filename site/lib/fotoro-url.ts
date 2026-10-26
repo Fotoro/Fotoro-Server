@@ -22,15 +22,19 @@ export function getNodeBaseUrl(node: {
   tailnet_url?: string | null;
   magic_dns?: string | null;
 }): string | null {
-  let raw = node.public_url ?? "";
   const allowTailnet =
     process.env.NODE_ENV !== "production" ||
     process.env.FOTORO_ALLOW_TAILNET_RELAY === "1";
 
-  if (!raw && allowTailnet) {
+  let raw = "";
+  if (allowTailnet) {
     raw =
       node.tailnet_url ||
       (node.magic_dns ? `https://${node.magic_dns}` : "");
+  }
+
+  if (!raw && process.env.FOTORO_ALLOW_PUBLIC_RELAY === "1") {
+    raw = node.public_url ?? "";
   }
 
   if (!raw) return null;

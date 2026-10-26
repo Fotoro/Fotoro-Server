@@ -75,9 +75,7 @@ async function proxyGet<T>(path: string, token: string): Promise<T> {
 
 /** Relative API path — resolve to direct funnel or proxy at render time. */
 export function thumbApiPath(hash: string, thumbnail?: string): string {
-  if (thumbnail?.startsWith("/api/thumbnail/")) {
-    return thumbnail.replace("size=medium", `size=${GRID_THUMB_SIZE}`);
-  }
+  void thumbnail;
   return gridThumbPath(hash);
 }
 

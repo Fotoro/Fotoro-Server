@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ImageIcon, Loader2, Play, RefreshCcw, Upload, X } from "lucide-react";
+import { Check, ImageIcon, Upload, X } from "lucide-react";
 import type { NodePublic } from "@/lib/fotoro-local";
-import { Button } from "@/components/ui/button";
+import { uploadResumable } from "@/lib/resumable-upload";
 
 type UploadState = Record<string, number>;
 
@@ -19,73 +19,22 @@ export function UploadZone({
 }) {
   const [progress, setProgress] = React.useState<UploadState>({});
   const [dragging, setDragging] = React.useState(false);
-  const [pending, setPending] = React.useState<number | null>(null);
-  const [processing, setProcessing] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
-
-  const refreshQueue = React.useCallback(async () => {
-    try {
-      const res = await fetch("/api/fotoro/api/scheduler/status", {
-        headers: { Authorization: `Bearer ${supabaseToken}` },
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setPending(typeof data.pending === "number" ? data.pending : 0);
-        setProcessing(Boolean(data.processing));
-      }
-    } catch {}
-  }, [supabaseToken]);
-
-  React.useEffect(() => {
-    void refreshQueue();
-    const id = window.setInterval(() => void refreshQueue(), 5000);
-    return () => window.clearInterval(id);
-  }, [refreshQueue]);
 
   async function uploadFiles(files: FileList) {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const formData = new FormData();
-      formData.append("image", file);
-      setProgress((prev) => ({ ...prev, [file.name]: 0 }));
+      const key = `${file.name} (${file.size} bytes)`;
+      setProgress((prev) => ({ ...prev, [key]: 0 }));
 
       try {
-        const res = await fetch("/api/fotoro/api/web/upload", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${supabaseToken}` },
-          body: formData,
-        });
-        if (res.ok) {
-          onUploaded?.();
-          void refreshQueue();
-        }
-        setProgress((prev) => ({
-          ...prev,
-          [file.name]: res.ok ? 100 : -1,
-        }));
+        await uploadResumable(file, supabaseToken, (value) =>
+          setProgress((prev) => ({ ...prev, [key]: value }))
+        );
+        onUploaded?.();
       } catch {
-        setProgress((prev) => ({ ...prev, [file.name]: -1 }));
+        setProgress((prev) => ({ ...prev, [key]: -1 }));
       }
-    }
-  }
-
-  async function processPending() {
-    setProcessing(true);
-    try {
-      const res = await fetch("/api/fotoro/api/scheduler/run", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${supabaseToken}` },
-      });
-      if (res.ok) {
-        window.setTimeout(() => {
-          void refreshQueue();
-          onUploaded?.();
-        }, 1500);
-      } else {
-        void refreshQueue();
-      }
-    } catch {
-      void refreshQueue();
     }
   }
 
@@ -102,35 +51,8 @@ export function UploadZone({
           <h3 className="text-sm font-semibold tracking-tight">Upload photos</h3>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Uploads go to your server via the secure Vercel → Tailscale tunnel.
+          Interrupted uploads resume when you select the same file again. Originals stay on your server.
         </p>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="rounded-md border border-border bg-muted px-2 py-1 text-xs text-muted-foreground">
-            {pending == null ? "Queue: --" : `${pending} pending`}
-          </span>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => void refreshQueue()}
-          >
-            <RefreshCcw className="mr-2 size-3.5" />
-            Refresh
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => void processPending()}
-            disabled={processing || !pending}
-          >
-            {processing ? (
-              <Loader2 className="mr-2 size-3.5 animate-spin" />
-            ) : (
-              <Play className="mr-2 size-3.5" />
-            )}
-            Process pending
-          </Button>
-        </div>
       </div>
 
       <div
@@ -160,7 +82,7 @@ export function UploadZone({
           ref={inputRef}
           type="file"
           multiple
-          accept="image/*"
+          accept="image/*,video/mp4,video/quicktime,video/webm,video/x-matroska"
           className="hidden"
           onChange={(e) => e.target.files && uploadFiles(e.target.files)}
         />

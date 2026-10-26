@@ -7,9 +7,9 @@ export function proxyMediaUrl(apiPath: string): string {
 }
 
 export function gridThumbPath(hash: string): string {
-  return `/api/thumbnail/${hash}?size=${GRID_THUMB_SIZE}`;
+  return `/api/v1/media/${encodeURIComponent(hash)}/thumbnail?size=${GRID_THUMB_SIZE}`;
 }
 
 export function fullImagePath(hash: string): string {
-  return `/api/image/${hash}`;
+  return `/api/v1/media/${encodeURIComponent(hash)}/content`;
 }
