@@ -62,11 +62,16 @@ async function proxyToRelay(
   const respHeaders = new Headers();
   const upstreamType = upstream.headers.get("content-type");
   if (upstreamType) respHeaders.set("Content-Type", upstreamType);
-  const cacheControl = upstream.headers.get("cache-control");
-  if (cacheControl) {
-    respHeaders.set("Cache-Control", cacheControl);
-  } else if (upstreamType?.startsWith("image/")) {
-    respHeaders.set("Cache-Control", "private, max-age=86400");
+  const isThumbnail = /^api\/thumbnail\/[a-f0-9]{64}$/.test(path) ||
+    /^api\/v1\/media\/[a-f0-9]{64}\/thumbnail$/.test(path);
+  if (upstream.ok && upstreamType?.startsWith("image/")) {
+    // Content-addressed thumbnails can stay in the owner's browser cache.
+    // Never forward a public cache directive from the private home server.
+    respHeaders.set("Cache-Control", isThumbnail
+      ? "private, max-age=31536000, immutable"
+      : "private, max-age=3600");
+  } else {
+    respHeaders.set("Cache-Control", "private, no-store");
   }
   for (const name of ["upload-offset", "upload-length", "location", "accept-ranges", "content-range", "etag", "last-modified"]) {
     const value = upstream.headers.get(name);

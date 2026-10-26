@@ -9,13 +9,12 @@ const SECTIONS = [
     items: [
       { id: "overview", label: "Overview" },
       { id: "self-host", label: "Self-host guide" },
-      { id: "first-sync", label: "Your first sync" },
+      { id: "first-sync", label: "Add media" },
     ],
   },
   {
     heading: "Operate",
     items: [
-      { id: "ai", label: "Local AI models" },
       { id: "backups", label: "Backups & dedup" },
       { id: "api", label: "HTTP API" },
     ],
@@ -25,7 +24,6 @@ const SECTIONS = [
     items: [
       { id: "troubleshooting", label: "Troubleshooting" },
       { id: "privacy", label: "Privacy" },
-      { id: "license", label: "License (MIT)" },
     ],
   },
 ] as const;

@@ -26,7 +26,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: {
-    default: `${SITE.name} — Your private, intelligent photo & video archive`,
+    default: `${SITE.name} — Your photos, on your server`,
     template: `%s · ${SITE.name}`,
   },
   description: SITE.description,
@@ -34,10 +34,6 @@ export const metadata: Metadata = {
     "self-hosted photos",
     "open source photo library",
     "private google photos alternative",
-    "local AI photo search",
-    "semantic photo search",
-    "multimodal embeddings",
-    "immich alternative",
     "Fotoro",
   ],
   applicationName: SITE.name,
@@ -88,28 +84,9 @@ const jsonLd = {
   "@type": "SoftwareApplication",
   name: SITE.name,
   applicationCategory: "MultimediaApplication",
-  operatingSystem: "macOS, Windows, Linux, Android, iOS",
+  operatingSystem: "Linux",
   description: SITE.description,
   url: SITE.url,
-  offers: [
-    {
-      "@type": "Offer",
-      name: "Core (self-hosted)",
-      price: "0",
-      priceCurrency: "USD",
-    },
-    {
-      "@type": "Offer",
-      name: "Semantic Search lifetime",
-      price: "19",
-      priceCurrency: "USD",
-    },
-  ],
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "4.9",
-    reviewCount: "212",
-  },
 };
 
 export default function RootLayout({
