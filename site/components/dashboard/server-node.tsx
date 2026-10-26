@@ -9,9 +9,11 @@ import type { NodePublic } from "@/lib/fotoro-local";
 export function ServerNodeCard({
   node,
   liveState,
+  connectError,
 }: {
   node: NodePublic | null;
   liveState?: "online" | "offline" | "checking" | "syncing";
+  connectError?: string | null;
 }) {
   if (!node) {
     return (
@@ -60,8 +62,10 @@ export function ServerNodeCard({
           <dt className="text-muted-foreground">Connection</dt>
           <dd className="font-mono text-xs text-foreground">Fotoro secure relay</dd>
         </div>
-        {node.connect_error ? (
-          <div className="px-5 py-3 text-xs text-muted-foreground">{node.connect_error}</div>
+        {connectError || node.connect_error ? (
+          <div className="px-5 py-3 text-xs text-muted-foreground">
+            {connectError || node.connect_error}
+          </div>
         ) : null}
       </dl>
     </motion.div>

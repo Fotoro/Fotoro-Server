@@ -1,57 +1,20 @@
-# Fotoro — Marketing site & web dashboard
+# Fotoro website and dashboard
 
-This is the Next.js 15 (App Router) frontend for [Fotoro](../), a private,
-self-hosted photo & video archive with local multimodal AI search.
+This Next.js app provides the Fotoro website, owner dashboard, canonical photo timeline, device pairing, and resumable browser uploads. The Go API and SQLite library live in the sibling `FotoroModel` repository.
 
-It lives next to the Go backend (`../main.go`) and is intentionally decoupled so
-you can deploy it on Vercel / Cloudflare Pages while the backend runs on your
-own hardware.
-
-## Stack
-
-- **Framework:** Next.js 15 (App Router, React 19, TypeScript strict)
-- **UI:** Tailwind CSS 3 + shadcn-style components on top of Radix Primitives
-- **Animations:** Framer Motion
-- **Auth:** Auth.js v5 (NextAuth) with GitHub / Google / credentials providers
-- **Forms:** React Hook Form + Zod
-- **Icons:** Lucide React
-- **QR:** `qrcode.react`
-
-## Pages
-
-| Route        | What it is                                                             |
-| ------------ | ---------------------------------------------------------------------- |
-| `/`          | Landing page (hero, features, semantic search demo, pricing, download) |
-| `/download`  | Desktop + mobile downloads with OS auto-detect                         |
-| `/login`     | OAuth (GitHub / Google) + email/password sign in                       |
-| `/dashboard` | Protected dashboard with devices, QR pairing, library stats            |
-| `/docs`      | Self-host guide, API reference, troubleshooting accordions             |
-
-## Quick start
+## Local development
 
 ```bash
-cd site
 cp .env.example .env.local
-# fill in AUTH_SECRET and (optionally) OAuth IDs
+# Configure Supabase and set FOTORO_LOCAL_SERVER_URL=http://127.0.0.1:8765
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Start `./fotoro server` in `FotoroModel` before opening the dashboard. The browser signs in with Supabase. The website looks up the signed-in owner's `nodes` row, then sends the bearer token to Go. Go independently checks that the user matches its locally bound owner. `/api/fotoro/...` is the authenticated website proxy; `/api/v1/...` is the same-origin device API and requires a valid owner or paired-device bearer token for protected routes.
 
-## Production
+## Private host deployment
 
-```bash
-npm run build
-npm start
-```
+Run `npm run build && npm start` on the same Linux host as Go, with `FOTORO_LOCAL_SERVER_URL=http://127.0.0.1:8765`. Set `FOTORO_PRIVATE_SITE=1` for the Go process so Tailscale Serve points to the Next.js port (3000 by default). The phone and browser must be on the tailnet. Configure `FOTORO_BACKUP_DIR` and `FOTORO_BACKUP_MOUNT_DIR` on an independent mounted filesystem for two-copy verification. See the [server runbook](../../FotoroModel/SERVER_V1_RUNBOOK.md) for the full setup and checks.
 
-Deploys cleanly to Vercel out of the box. For self-hosting, the standard
-`next start` works behind any reverse proxy.
-
-## Notes on dummy data
-
-The dashboard and semantic search demo on the landing page use mocked,
-in-memory state on purpose — the marketing site can be deployed independently
-of a running Go backend. Point `NEXT_PUBLIC_FOTORO_API` at your server when
-you're ready to wire real data.
+A cloud-hosted website cannot reach a private Tailscale endpoint unless its server runtime also joins the tailnet. `FOTORO_ALLOW_TAILNET_RELAY=1` only enables this lookup on a tailnet-capable host. Public Funnel relay is opt-in with `FOTORO_ALLOW_PUBLIC_RELAY=1` and does not meet the private v1 deployment scope.

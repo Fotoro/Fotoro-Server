@@ -8,6 +8,8 @@ type RelayNodeRow = {
   last_seen?: string | null;
 };
 
+const nodeRouteCache = new Map<string, { base: string; expires: number }>();
+
 export type RelayDiagnosticCode =
   | "ONLINE"
   | "NO_NODE"
@@ -30,6 +32,8 @@ export type RelayDiagnostic = {
 
 /** Server-side only — funnel URL never sent to the browser. */
 export async function getRelayBaseUrlForUser(userId: string): Promise<string> {
+  const cached = nodeRouteCache.get(userId);
+  if (cached && cached.expires > Date.now()) return cached.base;
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("nodes")
@@ -50,6 +54,7 @@ export async function getRelayBaseUrlForUser(userId: string): Promise<string> {
     if (parsed.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname)) {
       throw new Error("FOTORO_LOCAL_SERVER_URL must use a loopback HTTP address");
     }
+    nodeRouteCache.set(userId, { base: parsed.origin, expires: Date.now() + 30_000 });
     return parsed.origin;
   }
 
@@ -61,6 +66,8 @@ export async function getRelayBaseUrlForUser(userId: string): Promise<string> {
         : "No server route configured — run ./fotoro server"
     );
   }
+  if (nodeRouteCache.size > 100) nodeRouteCache.clear();
+  nodeRouteCache.set(userId, { base, expires: Date.now() + 30_000 });
   return base;
 }
 

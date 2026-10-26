@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySupabaseToken } from "@/lib/auth-verify";
-import { relayFetch, sanitizeRelayError } from "@/lib/fotoro-relay";
+import { diagnoseRelayConnectivity, sanitizeRelayError } from "@/lib/fotoro-relay";
 
 /** Server-side connectivity check — browser never sees funnel URL or tailscale IP. */
 export async function GET(request: NextRequest) {
@@ -14,19 +14,18 @@ export async function GET(request: NextRequest) {
     const claims = await verifySupabaseToken(bearer);
     const userId = claims.sub as string;
 
-    const upstream = await relayFetch(userId, bearer, "api/stats");
-    const data = await upstream.json().catch(() => ({}));
-
-    if (!upstream.ok) {
-      const raw = (data as { error?: string }).error ?? `Relay returned ${upstream.status}`;
-      return NextResponse.json({
-        online: false,
-        error: sanitizeRelayError(raw) || "Home server not responding. Run ./fotoro server.",
-      });
-    }
-
-    const total = (data as { total?: number }).total ?? 0;
-    return NextResponse.json({ online: true, photos: total });
+    const diagnostic = await diagnoseRelayConnectivity(userId, bearer);
+    return NextResponse.json({
+      online: diagnostic.online,
+      photos: diagnostic.photos ?? 0,
+      error: diagnostic.online ? null : diagnostic.message,
+      code: diagnostic.code,
+      stage: diagnostic.stage,
+      status: diagnostic.status,
+      last_seen: diagnostic.lastSeen,
+      has_public_url: diagnostic.hasPublicUrl,
+      has_tailnet_url: diagnostic.hasTailnetUrl,
+    });
   } catch (error) {
     const raw = error instanceof Error ? error.message : "Connectivity check failed";
     let hint = sanitizeRelayError(raw);

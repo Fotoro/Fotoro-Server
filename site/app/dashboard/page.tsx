@@ -70,7 +70,7 @@ export default function DashboardPage() {
     }
   }
 
-  const { online, refresh } = useServerData();
+  const { online, connectError, refresh } = useServerData();
 
   function handleLogout() {
     clearAuth();
@@ -139,7 +139,7 @@ export default function DashboardPage() {
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div className="space-y-6">
-            <ServerNodeCard node={node} liveState={online} />
+            <ServerNodeCard node={node} liveState={online} connectError={connectError} />
             {serverOnline && node ? (
               <UploadZone node={node} supabaseToken={token} />
             ) : (
@@ -149,8 +149,8 @@ export default function DashboardPage() {
                   Connect your server to upload
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Run <code className="rounded bg-muted px-1">./fotoro server</code> on your
-                  machine after setup.
+                  {connectError ||
+                    "Run ./fotoro server on your machine after setup."}
                 </p>
               </div>
             )}
