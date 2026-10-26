@@ -1,82 +1,122 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Check, ImageIcon, Upload, X } from "lucide-react";
-import type { NodePublic } from "@/lib/fotoro-local";
-import { uploadResumable } from "@/lib/resumable-upload";
+import { Check, ImageIcon, Loader2, Upload, X } from "lucide-react";
+import { getValidAccessToken } from "@/lib/fotoro-session";
+import {
+  fetchOffloadAsset,
+  uploadResumable,
+  verifyDownloadedOriginal,
+  type OffloadAsset,
+} from "@/lib/resumable-upload";
 
-type UploadState = Record<string, number>;
+type UploadEntry = {
+  id: number;
+  file: File;
+  progress: number;
+  asset?: OffloadAsset;
+  duplicate?: boolean;
+  checking?: boolean;
+  verification?: "full" | "ranges";
+  error?: string;
+};
 
-export function UploadZone({
-  node: _node,
-  supabaseToken,
-  onUploaded,
-}: {
-  node: NodePublic;
-  supabaseToken: string;
-  onUploaded?: () => void;
-}) {
-  const [progress, setProgress] = React.useState<UploadState>({});
+export function UploadZone({ onUploaded }: { onUploaded?: () => void }) {
+  const [entries, setEntries] = React.useState<UploadEntry[]>([]);
   const [dragging, setDragging] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const nextId = React.useRef(0);
+  const busyRef = React.useRef(false);
+
+  function updateEntry(id: number, changes: Partial<UploadEntry>) {
+    setEntries((current) => current.map((entry) => entry.id === id ? { ...entry, ...changes } : entry));
+  }
 
   async function uploadFiles(files: FileList) {
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const key = `${file.name} (${file.size} bytes)`;
-      setProgress((prev) => ({ ...prev, [key]: 0 }));
-
-      try {
-        await uploadResumable(file, supabaseToken, (value) =>
-          setProgress((prev) => ({ ...prev, [key]: value }))
-        );
-        onUploaded?.();
-      } catch {
-        setProgress((prev) => ({ ...prev, [key]: -1 }));
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    try {
+      for (const file of Array.from(files)) {
+        const id = ++nextId.current;
+        setEntries((current) => [{ id, file, progress: 0 }, ...current]);
+        try {
+          const receipt = await uploadResumable(file, getValidAccessToken, (progress) =>
+            updateEntry(id, { progress })
+          );
+          updateEntry(id, { progress: 100, asset: receipt.asset, duplicate: receipt.duplicate });
+          onUploaded?.();
+          // Derivatives are generated after the original is safely committed.
+          window.setTimeout(() => onUploaded?.(), 5000);
+        } catch (error) {
+          updateEntry(id, {
+            error: error instanceof Error ? error.message : "Upload failed. Select the file again to resume.",
+          });
+        }
       }
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  }
+
+  async function checkBackup(entry: UploadEntry) {
+    if (!entry.asset) return;
+    updateEntry(entry.id, { checking: true, error: undefined });
+    try {
+      const asset = await fetchOffloadAsset(entry.asset.id, getValidAccessToken);
+      updateEntry(entry.id, { asset, checking: false });
+      onUploaded?.();
+    } catch (error) {
+      updateEntry(entry.id, { checking: false, error: error instanceof Error ? error.message : "Status check failed" });
+    }
+  }
+
+  async function checkDownload(entry: UploadEntry) {
+    if (!entry.asset) return;
+    updateEntry(entry.id, { checking: true, error: undefined });
+    try {
+      const result = await verifyDownloadedOriginal(entry.file, entry.asset, getValidAccessToken);
+      updateEntry(entry.id, { checking: false, verification: result });
+    } catch (error) {
+      updateEntry(entry.id, { checking: false, error: error instanceof Error ? error.message : "Read-back check failed" });
     }
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 }}
-      className="rounded-xl border border-border bg-card ring-soft"
-    >
+    <section className="self-start rounded-xl border border-border bg-card ring-soft" aria-label="Offload photos and videos">
       <div className="border-b border-border px-5 py-4">
         <div className="flex items-center gap-2">
           <Upload className="size-4 text-foreground" />
-          <h3 className="text-sm font-semibold tracking-tight">Upload photos</h3>
+          <h3 className="text-sm font-semibold tracking-tight">Offload photos and videos</h3>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Interrupted uploads resume when you select the same file again. Originals stay on your server.
+          Originals are checked before saving. If a transfer stops, select the same file to resume.
         </p>
       </div>
 
       <div
-        className={`m-5 rounded-xl border-2 border-dashed p-10 text-center transition-colors ${
-          dragging
-            ? "border-foreground/40 bg-accent/30"
-            : "border-border hover:border-foreground/25"
+        className={`m-5 rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
+          dragging ? "border-foreground/40 bg-accent/30" : "border-border hover:border-foreground/25"
         }`}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
+        onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
+        onDrop={(event) => {
+          event.preventDefault();
           setDragging(false);
-          if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
+          if (event.dataTransfer.files.length) void uploadFiles(event.dataTransfer.files);
         }}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => { if (!busy) inputRef.current?.click(); }}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
+        onKeyDown={(event) => {
+          if (!busy && (event.key === "Enter" || event.key === " ")) {
+            event.preventDefault();
+            inputRef.current?.click();
+          }
         }}
+        aria-disabled={busy}
       >
         <input
           ref={inputRef}
@@ -84,34 +124,54 @@ export function UploadZone({
           multiple
           accept="image/*,video/mp4,video/quicktime,video/webm,video/x-matroska"
           className="hidden"
-          onChange={(e) => e.target.files && uploadFiles(e.target.files)}
+          onChange={(event) => {
+            if (event.target.files?.length) void uploadFiles(event.target.files);
+            event.target.value = "";
+          }}
         />
         <ImageIcon className="mx-auto mb-3 size-8 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">
-          Click or drag photos here
+          {busy ? "Uploading selected files…" : "Click or drag photos and videos here"}
         </p>
       </div>
 
-      <AnimatePresence>
-        {Object.entries(progress).map(([name, value]) => (
-          <motion.div
-            key={name}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex items-center gap-2 border-t border-border px-5 py-2.5 text-sm"
-          >
-            <span className="flex-1 truncate text-muted-foreground">{name}</span>
-            {value === 100 ? (
-              <Check className="size-4 text-green-400" />
-            ) : value < 0 ? (
-              <X className="size-4 text-red-400" />
-            ) : (
-              <span className="text-xs text-muted-foreground">{value}%</span>
-            )}
-          </motion.div>
-        ))}
-      </AnimatePresence>
-    </motion.div>
+      {entries.length > 0 ? (
+        <div className="max-h-[30rem] overflow-y-auto border-t border-border">
+          {entries.map((entry) => (
+            <div key={entry.id} className="border-b border-border px-5 py-3 text-xs last:border-b-0">
+              <div className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate font-medium" title={entry.file.name}>{entry.file.name}</span>
+                {entry.checking ? <Loader2 className="size-4 animate-spin" /> : entry.error ?
+                  <X className="size-4 text-red-400" /> : entry.asset ?
+                  <Check className="size-4 text-green-400" /> :
+                  <span className="tabular-nums text-muted-foreground">{entry.progress}%</span>}
+              </div>
+              {entry.error ? <p className="mt-1 text-red-400">{entry.error}</p> : null}
+              {entry.asset ? (
+                <div className="mt-2 space-y-1 text-muted-foreground">
+                  <p>{entry.duplicate ? "Already saved in your library" : "Original saved and SHA-256 checked"} · {entry.asset.id.slice(0, 12)}…</p>
+                  <p>{entry.asset.safe_to_delete ? "Two verified copies · safe to delete from phone" :
+                    `${entry.asset.verified_storage_copies} verified copy · keep the phone copy`}</p>
+                  <div className="flex flex-wrap gap-3 pt-1">
+                    <a href={`/api/fotoro${entry.asset.content_url}`} target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-2">
+                      Open original
+                    </a>
+                    <button type="button" onClick={() => void checkBackup(entry)} disabled={entry.checking} className="text-foreground underline underline-offset-2 disabled:opacity-50">
+                      Check backup
+                    </button>
+                    <button type="button" onClick={() => void checkDownload(entry)} disabled={entry.checking} className="text-foreground underline underline-offset-2 disabled:opacity-50">
+                      Verify download
+                    </button>
+                  </div>
+                  {entry.verification ? (
+                    <p className="text-green-400">{entry.verification === "full" ? "Full downloaded SHA-256 matches the selected file." : "First and last downloaded ranges match the selected file; the server verified the full SHA-256."}</p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </section>
   );
 }

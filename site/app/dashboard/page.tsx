@@ -141,7 +141,7 @@ export default function DashboardPage() {
           <div className="space-y-6">
             <ServerNodeCard node={node} liveState={online} connectError={connectError} />
             {serverOnline && node ? (
-              <UploadZone node={node} supabaseToken={token} />
+              <UploadZone />
             ) : (
               <div className="rounded-xl border border-dashed border-border bg-card/40 p-8 text-center ring-soft">
                 <Upload className="mx-auto mb-3 size-8 text-muted-foreground" />

@@ -100,8 +100,6 @@ export default function LibraryPage() {
           <PhotoGallery ref={galleryRef} />
           {online === "online" && node ? (
             <UploadZone
-              node={node}
-              supabaseToken={token}
               onUploaded={() => {
                 void refresh();
                 galleryRef.current?.refresh();
