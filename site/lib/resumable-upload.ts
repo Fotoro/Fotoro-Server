@@ -19,8 +19,24 @@ export type OffloadAsset = {
 
 export type OffloadReceipt = { asset: OffloadAsset; duplicate: boolean };
 
-function storageKey(file: File): string {
-  return `fotoro-upload:${file.name}:${file.size}:${file.lastModified}`;
+async function storageKey(file: File): Promise<string> {
+  // A sampled fingerprint prevents same-name, same-size files from sharing a
+  // saved upload session. The server still checks the complete original hash.
+  const sampleSize = Math.min(file.size, RANGE_CHECK_BYTES);
+  const head = new Uint8Array(await file.slice(0, sampleSize).arrayBuffer());
+  const tail = new Uint8Array(await file.slice(Math.max(0, file.size - sampleSize)).arrayBuffer());
+  const sample = new Uint8Array(head.length + tail.length);
+  sample.set(head);
+  sample.set(tail, head.length);
+  let fingerprint = "";
+  if (crypto.subtle) {
+    fingerprint = await digest(sample.buffer);
+  } else {
+    let value = 2166136261;
+    for (const byte of sample) value = Math.imul(value ^ byte, 16777619);
+    fingerprint = (value >>> 0).toString(16);
+  }
+  return `fotoro-upload:${file.name}:${file.size}:${file.lastModified}:${fingerprint}`;
 }
 
 async function digest(bytes: ArrayBuffer): Promise<string> {
@@ -60,7 +76,7 @@ export async function uploadResumable(
   onProgress: (percent: number) => void
 ): Promise<OffloadReceipt> {
   if (file.size === 0) throw new Error("Choose a nonempty photo or video.");
-  const key = storageKey(file);
+  const key = await storageKey(file);
   let id = localStorage.getItem(key);
   let offset = 0;
 

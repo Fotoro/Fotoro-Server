@@ -124,6 +124,7 @@ export function UploadZone({ onUploaded }: { onUploaded?: () => void }) {
           multiple
           accept="image/*,video/mp4,video/quicktime,video/webm,video/x-matroska"
           className="hidden"
+          onClick={(event) => event.stopPropagation()}
           onChange={(event) => {
             if (event.target.files?.length) void uploadFiles(event.target.files);
             event.target.value = "";

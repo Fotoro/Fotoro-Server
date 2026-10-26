@@ -3,6 +3,8 @@ import { verifySupabaseToken } from "@/lib/auth-verify";
 import { FOTORO_PROXY_COOKIE } from "@/lib/fotoro-proxy-cookie";
 import { getRelayBaseUrlForUser, sanitizeRelayError } from "@/lib/fotoro-relay";
 
+const MAX_PROXY_BODY_BYTES = 16 * 1024 * 1024 + 64 * 1024;
+
 /** Server-side proxy to the account's private home server. */
 async function proxyToRelay(
   request: NextRequest,
@@ -32,12 +34,15 @@ async function proxyToRelay(
   };
 
   if (["POST", "PUT", "PATCH"].includes(request.method)) {
-    const ct = request.headers.get("content-type") ?? "";
-    if (ct.includes("multipart/form-data") || request.method === "PATCH") {
-      init.body = await request.arrayBuffer();
-    } else {
-      init.body = await request.text();
+    const contentLength = Number(request.headers.get("content-length") ?? 0);
+    if (contentLength > MAX_PROXY_BODY_BYTES) {
+      return NextResponse.json({ error: "Upload chunk exceeds the proxy limit" }, { status: 413 });
     }
+    const body = await request.arrayBuffer();
+    if (body.byteLength > MAX_PROXY_BODY_BYTES) {
+      return NextResponse.json({ error: "Upload chunk exceeds the proxy limit" }, { status: 413 });
+    }
+    init.body = body;
   }
 
   let upstream: Response;
