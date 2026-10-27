@@ -1,6 +1,6 @@
 /**
- * Talks to your local Fotoro server only via Vercel secure relay (/api/fotoro/*).
- * Funnel URLs and tailscale IPs never reach the browser.
+ * Uses the website relay for authenticated metadata and scoped signed Funnel
+ * links for media bytes when the home server provides them.
  */
 
 import {
@@ -28,6 +28,7 @@ export interface GalleryPhoto {
   width?: number;
   height?: number;
   media_kind?: string;
+  mimeType?: string;
   safe_to_delete?: boolean;
 }
 

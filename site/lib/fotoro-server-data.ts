@@ -56,6 +56,7 @@ interface ApiMediaRow {
   id: string;
   sha256: string;
   media_kind: string;
+  mime_type?: string;
   captured_at?: string;
   imported_at: string;
   thumbnail_url?: string;
@@ -146,6 +147,7 @@ function mapApiMedia(row: ApiMediaRow): GalleryPhoto {
     caption: "",
     category: row.media_kind,
     media_kind: row.media_kind,
+    mimeType: row.mime_type,
     taken_at: row.captured_at ?? row.imported_at,
     added_at: row.imported_at,
     thumbnail: row.direct_thumbnail_url || thumbnailFallback,

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Film, ImageIcon, Loader2, Search, X } from "lucide-react";
+import { FileText, Film, ImageIcon, Loader2, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { fetchPhotosPage } from "@/lib/fotoro-server-data";
@@ -37,7 +37,9 @@ function LazyThumb({ photo, index }: { photo: GalleryPhoto; index: number }) {
 
   return (
     <div className="size-full bg-muted/20">
-      {src ? (
+      {photo.media_kind === "document" ? (
+        <div className="flex size-full items-center justify-center text-muted-foreground"><FileText className="size-7" /></div>
+      ) : src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}

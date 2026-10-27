@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight, ExternalLink, Maximize2, Minus, Plus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, FileText, Maximize2, Minus, Plus, X } from "lucide-react";
 import { formatBytes } from "@/lib/fotoro-server-data";
 import type { GalleryPhoto } from "@/lib/fotoro-local";
 
@@ -24,6 +24,8 @@ const clampZoom = (value: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value
 
 export function PhotoViewer({ photo, previous, next, position, total, hasNext, onPrevious, onNext, onClose }: ViewerProps) {
   const isVideo = photo.media_kind === "video";
+  const isDocument = photo.media_kind === "document";
+  const isPhoto = !isVideo && !isDocument;
   const closeRef = React.useRef<HTMLButtonElement>(null);
   const stageRef = React.useRef<HTMLDivElement>(null);
   const pointers = React.useRef(new Map<number, { x: number; y: number }>());
@@ -36,8 +38,8 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
   const [originalSrc, setOriginalSrc] = React.useState(photo.original || photo.originalFallback || "");
   const [requestOriginal, setRequestOriginal] = React.useState(false);
   const [originalReady, setOriginalReady] = React.useState(false);
-  const previousPreview = previous?.preview;
-  const nextPreview = next?.preview;
+  const previousPreview = previous?.media_kind === "document" ? undefined : previous?.preview;
+  const nextPreview = next?.media_kind === "document" ? undefined : next?.preview;
 
   React.useEffect(() => {
     setZoom(1);
@@ -66,13 +68,13 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
   }, [previousPreview, nextPreview]);
 
   const changeZoom = React.useCallback((factor: number) => {
-    if (isVideo) return;
+    if (!isPhoto) return;
     if (factor > 1) setRequestOriginal(true);
     setZoom((current) => {
       const value = clampZoom(current * factor);
       return value;
     });
-  }, [isVideo]);
+  }, [isPhoto]);
 
   React.useEffect(() => {
     if (zoom === 1) setOffset({ x: 0, y: 0 });
@@ -80,14 +82,14 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
 
   React.useEffect(() => {
     const stage = stageRef.current;
-    if (!stage || isVideo) return;
+    if (!stage || !isPhoto) return;
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
       changeZoom(event.deltaY < 0 ? 1.2 : 1 / 1.2);
     };
     stage.addEventListener("wheel", onWheel, { passive: false });
     return () => stage.removeEventListener("wheel", onWheel);
-  }, [changeZoom, isVideo]);
+  }, [changeZoom, isPhoto]);
 
   React.useEffect(() => {
     const priorOverflow = document.body.style.overflow;
@@ -97,19 +99,19 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
       if (event.key === "Escape") onClose();
       else if (event.key === "ArrowLeft") { event.preventDefault(); onPrevious(); }
       else if (event.key === "ArrowRight") { event.preventDefault(); onNext(); }
-      else if (!isVideo && (event.key === "+" || event.key === "=")) { event.preventDefault(); changeZoom(1.25); }
-      else if (!isVideo && event.key === "-") { event.preventDefault(); changeZoom(1 / 1.25); }
-      else if (!isVideo && event.key === "0") { event.preventDefault(); setZoom(1); setOffset({ x: 0, y: 0 }); }
+      else if (isPhoto && (event.key === "+" || event.key === "=")) { event.preventDefault(); changeZoom(1.25); }
+      else if (isPhoto && event.key === "-") { event.preventDefault(); changeZoom(1 / 1.25); }
+      else if (isPhoto && event.key === "0") { event.preventDefault(); setZoom(1); setOffset({ x: 0, y: 0 }); }
     };
     document.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = priorOverflow;
       document.removeEventListener("keydown", onKey);
     };
-  }, [onClose, onPrevious, onNext, changeZoom, isVideo]);
+  }, [onClose, onPrevious, onNext, changeZoom, isPhoto]);
 
   function pointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    if (isVideo) return;
+    if (!isPhoto) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointers.current.size === 2) {
@@ -122,7 +124,7 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
   }
 
   function pointerMove(event: React.PointerEvent<HTMLDivElement>) {
-    if (!pointers.current.has(event.pointerId) || isVideo) return;
+    if (!pointers.current.has(event.pointerId) || !isPhoto) return;
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointers.current.size === 2 && pinch.current) {
       const [a, b] = [...pointers.current.values()];
@@ -156,7 +158,7 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
       <header className="flex min-h-14 items-center justify-between gap-3 border-b border-white/15 px-3 sm:px-5" onClick={(event) => event.stopPropagation()}>
         <div className="min-w-0"><p className="truncate text-sm font-medium">{title}</p><p className="font-mono text-[11px] text-white/55">{position.toLocaleString()} / {total.toLocaleString()}</p></div>
         <div className="flex items-center gap-1">
-          {!isVideo ? <>
+          {isPhoto ? <>
             <button type="button" onClick={() => changeZoom(1 / 1.25)} aria-label="Zoom out" className="rounded p-2 hover:bg-white/10"><Minus className="size-5" /></button>
             <span className="w-12 text-center font-mono text-xs text-white/70">{Math.round(zoom * 100)}%</span>
             <button type="button" onClick={() => changeZoom(1.25)} aria-label="Zoom in" className="rounded p-2 hover:bg-white/10"><Plus className="size-5" /></button>
@@ -169,9 +171,19 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
 
       <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden" onClick={(event) => event.stopPropagation()}>
         <button type="button" onClick={onPrevious} disabled={position <= 1} aria-label="Previous image" className="absolute left-2 z-20 rounded-full border border-white/20 bg-black/60 p-2.5 hover:bg-black/80 disabled:opacity-25 sm:left-5"><ChevronLeft className="size-6" /></button>
-        <div ref={stageRef} className="relative size-full overflow-hidden bg-black/60" style={{ touchAction: isVideo ? "auto" : "none" }} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onDoubleClick={() => { if (zoom > 1) { setZoom(1); setOffset({ x: 0, y: 0 }); } else changeZoom(2); }}>
+        <div ref={stageRef} className="relative size-full overflow-hidden bg-black/60" style={{ touchAction: isPhoto ? "none" : "auto" }} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onDoubleClick={() => { if (zoom > 1) { setZoom(1); setOffset({ x: 0, y: 0 }); } else changeZoom(2); }}>
           {isVideo ? (
             <video key={photo.id} src={original} controls preload="metadata" className="size-full object-contain" />
+          ) : isDocument ? (
+            photo.mimeType === "application/pdf" && original ? (
+              <iframe key={photo.id} src={original} title={title} referrerPolicy="no-referrer" className="size-full border-0 bg-white" />
+            ) : (
+              <div className="flex size-full flex-col items-center justify-center gap-4 text-white/70">
+                <FileText className="size-16" />
+                <p className="max-w-md truncate px-4 text-sm">{title}</p>
+                {original ? <a href={original} target="_blank" rel="noreferrer" referrerPolicy="no-referrer" className="rounded border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/10">Open document</a> : null}
+              </div>
+            )
           ) : (
             <div className="relative size-full" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, transformOrigin: "center", cursor: zoom > 1 ? "grab" : "zoom-in" }}>
               {photo.thumbnail && !previewReady ? <img src={photo.thumbnail} alt="" referrerPolicy="no-referrer" className="absolute inset-0 size-full object-contain blur-lg" /> : null}
@@ -185,7 +197,7 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
       </div>
 
       <footer className="flex min-h-12 flex-wrap items-center gap-x-5 gap-y-1 border-t border-white/15 px-4 py-2 font-mono text-[11px] text-white/60" onClick={(event) => event.stopPropagation()}>
-        <span>{isVideo ? "Video" : originalReady ? "Original resolution" : "Display preview"}</span>
+        <span>{isVideo ? "Video" : isDocument ? "Document" : originalReady ? "Original resolution" : "Display preview"}</span>
         {photo.width && photo.height ? <span>{photo.width} × {photo.height}</span> : null}
         {photo.fileSize ? <span>{formatBytes(photo.fileSize)}</span> : null}
         {photo.taken_at ? <span>{new Date(photo.taken_at).toLocaleString()}</span> : null}
