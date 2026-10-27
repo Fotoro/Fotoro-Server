@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySupabaseToken } from "@/lib/auth-verify";
 import { FOTORO_PROXY_COOKIE } from "@/lib/fotoro-proxy-cookie";
-import { getRelayBaseUrlForUser, sanitizeRelayError } from "@/lib/fotoro-relay";
+import { fetchRelayWithWakeRetry, getRelayBaseUrlForUser, sanitizeRelayError } from "@/lib/fotoro-relay";
 
 const MAX_PROXY_BODY_BYTES = 16 * 1024 * 1024 + 64 * 1024;
 
@@ -56,7 +56,7 @@ async function proxyToRelay(
 
   let upstream: Response;
   try {
-    upstream = await fetch(target.toString(), init);
+    upstream = await fetchRelayWithWakeRetry(target.toString(), init);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "fetch failed";
     return NextResponse.json(

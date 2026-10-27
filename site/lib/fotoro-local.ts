@@ -18,6 +18,15 @@ export interface GalleryPhoto {
   added_at?: string;
   taken_at?: string;
   thumbnail: string;
+  thumbnailFallback?: string;
+  preview?: string;
+  previewFallback?: string;
+  original?: string;
+  originalFallback?: string;
+  originalName?: string;
+  fileSize?: number;
+  width?: number;
+  height?: number;
   media_kind?: string;
   safe_to_delete?: boolean;
 }

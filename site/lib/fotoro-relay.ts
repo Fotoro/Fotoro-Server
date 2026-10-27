@@ -10,6 +10,28 @@ type RelayNodeRow = {
 
 const nodeRouteCache = new Map<string, { base: string; expires: number }>();
 
+/** A socket-activated home server may need one short wake retry. Only retry reads. */
+export async function fetchRelayWithWakeRetry(target: string, init: RequestInit): Promise<Response> {
+  const method = (init.method ?? "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD") return fetch(target, init);
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await fetch(target, init);
+      if (attempt === 0 && [502, 503, 504].includes(response.status)) {
+        await response.body?.cancel();
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        continue;
+      }
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 700));
+    }
+  }
+  throw lastError ?? new Error("Home server unavailable");
+}
+
 export type RelayDiagnosticCode =
   | "ONLINE"
   | "NO_NODE"
@@ -99,7 +121,7 @@ export async function relayFetch(
   const headers = new Headers(init?.headers);
   headers.set("Authorization", `Bearer ${bearer}`);
 
-  return fetch(target.toString(), {
+  return fetchRelayWithWakeRetry(target.toString(), {
     ...init,
     headers,
     signal: init?.signal ?? AbortSignal.timeout(30_000),
@@ -158,51 +180,21 @@ export async function diagnoseRelayConnectivity(
     new URL(path.replace(/^\//, ""), base.endsWith("/") ? base : `${base}/`).toString();
 
   try {
-    const health = await fetch(target("api/health"), {
-      signal: AbortSignal.timeout(8_000),
-      cache: "no-store",
-    });
-    if (!health.ok) {
-      return {
-        online: false,
-        code: health.status === 502 ? "FUNNEL_BAD_GATEWAY" : "RELAY_UNREACHABLE",
-        stage: "health_probe",
-        status: health.status,
-        message:
-          health.status === 502
-            ? "The private route is reachable, but it cannot reach ./fotoro server on port 8765."
-            : `Relay health check returned HTTP ${health.status}.`,
-        ...baseInfo,
-      };
-    }
-  } catch (err) {
-    return {
-      online: false,
-      code: "RELAY_UNREACHABLE",
-      stage: "health_probe",
-      message:
-        sanitizeRelayError(err instanceof Error ? err.message : "Relay health check failed") ||
-        "Cannot reach the public relay URL.",
-      ...baseInfo,
-    };
-  }
-
-  try {
-    const stats = await fetch(target("api/stats"), {
+    const probe = await fetchRelayWithWakeRetry(target("api/v1/me"), {
       headers: { Authorization: `Bearer ${bearer}` },
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(20_000),
       cache: "no-store",
     });
-    const data = await stats.json().catch(() => ({}));
-    if (!stats.ok) {
-      const raw = (data as { error?: string }).error ?? `Authenticated probe returned HTTP ${stats.status}`;
+    const data = await probe.json().catch(() => ({}));
+    if (!probe.ok) {
+      const raw = (data as { error?: string }).error ?? `Authenticated probe returned HTTP ${probe.status}`;
       return {
         online: false,
-        code: stats.status === 401 || stats.status === 403 ? "AUTH_FAILED" : "SERVER_ERROR",
+        code: probe.status === 401 || probe.status === 403 ? "AUTH_FAILED" : probe.status === 502 ? "FUNNEL_BAD_GATEWAY" : "SERVER_ERROR",
         stage: "auth_probe",
-        status: stats.status,
+        status: probe.status,
         message:
-          stats.status === 401 || stats.status === 403
+          probe.status === 401 || probe.status === 403
             ? "Relay is reachable, but the local server rejected the website session. Sign in with the same account on the website and CLI, then run ./fotoro nodesync."
             : sanitizeRelayError(raw),
         ...baseInfo,
@@ -214,7 +206,6 @@ export async function diagnoseRelayConnectivity(
       code: "ONLINE",
       stage: "auth_probe",
       message: "Server is online through the private route.",
-      photos: (data as { total?: number }).total ?? 0,
       ...baseInfo,
     };
   } catch (err) {

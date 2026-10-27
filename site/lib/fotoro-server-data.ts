@@ -9,6 +9,9 @@ export interface ServerLibraryStats {
   storage_used_bytes: number;
   disk_total_bytes: number;
   disk_free_bytes: number;
+  media_bytes: number;
+  cache_bytes: number;
+  staging_bytes: number;
   devices_count: number;
   photos_with_faces: number;
   queue_pending: number;
@@ -56,6 +59,13 @@ interface ApiMediaRow {
   captured_at?: string;
   imported_at: string;
   thumbnail_url?: string;
+  direct_thumbnail_url?: string;
+  direct_preview_url?: string;
+  direct_content_url?: string;
+  original_name?: string;
+  file_size?: number;
+  width?: number;
+  height?: number;
   safe_to_delete: boolean;
 }
 
@@ -74,6 +84,9 @@ interface ApiStats {
   storage_used_bytes?: number;
   disk_total_bytes?: number;
   disk_free_bytes?: number;
+  media_bytes?: number;
+  cache_bytes?: number;
+  staging_bytes?: number;
   devices_count?: number;
   photos_with_faces?: number;
   queue_pending?: number;
@@ -123,6 +136,11 @@ function mapApiImage(row: ApiImageRow): GalleryPhoto {
 }
 
 function mapApiMedia(row: ApiMediaRow): GalleryPhoto {
+  const thumbnailFallback = row.thumbnail_url ? proxyMediaUrl(row.thumbnail_url) : "";
+  const previewFallback = row.thumbnail_url
+    ? proxyMediaUrl(row.thumbnail_url.replace("size=small", "size=medium"))
+    : "";
+  const originalFallback = proxyMediaUrl(`/api/v1/media/${encodeURIComponent(row.id)}/content`);
   return {
     id: row.id,
     caption: "",
@@ -130,7 +148,16 @@ function mapApiMedia(row: ApiMediaRow): GalleryPhoto {
     media_kind: row.media_kind,
     taken_at: row.captured_at ?? row.imported_at,
     added_at: row.imported_at,
-    thumbnail: row.thumbnail_url ? proxyMediaUrl(row.thumbnail_url) : "",
+    thumbnail: row.direct_thumbnail_url || thumbnailFallback,
+    thumbnailFallback,
+    preview: row.direct_preview_url || previewFallback,
+    previewFallback,
+    original: row.direct_content_url || originalFallback,
+    originalFallback,
+    originalName: row.original_name,
+    fileSize: row.file_size,
+    width: row.width,
+    height: row.height,
     safe_to_delete: row.safe_to_delete,
   };
 }
@@ -146,6 +173,9 @@ export async function fetchLibraryStats(token: string): Promise<ServerLibrarySta
       storage_used_bytes: data.storage_used_bytes ?? 0,
       disk_total_bytes: data.disk_total_bytes ?? 0,
       disk_free_bytes: data.disk_free_bytes ?? 0,
+      media_bytes: data.media_bytes ?? data.storage_used_bytes ?? 0,
+      cache_bytes: data.cache_bytes ?? 0,
+      staging_bytes: data.staging_bytes ?? 0,
       devices_count: data.devices_count ?? 0,
       photos_with_faces: data.photos_with_faces ?? 0,
       queue_pending: data.queue_pending ?? 0,
@@ -209,7 +239,7 @@ export async function searchPhotosApi(
 export function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) return "—";
   if (bytes === 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
+  const units = ["B", "KiB", "MiB", "GiB", "TiB"];
   let v = bytes;
   let i = 0;
   while (v >= 1024 && i < units.length - 1) {

@@ -63,9 +63,10 @@ export default function StoragePage() {
   const rows = [
     { label: "Media items", value: live ? formatCount(live.photos_total) : "—" },
     { label: "Medium thumbnails", value: live ? formatCount(live.thumbnails_medium) : "—" },
-    { label: "Indexed originals, cache and staging", value: live ? formatBytes(live.storage_used_bytes) : "—" },
+    { label: "Preview cache", value: live ? formatBytes(live.cache_bytes) : "—" },
+    { label: "Upload staging", value: live ? formatBytes(live.staging_bytes) : "—" },
+    { label: "Fotoro media, previews and staging", value: live ? formatBytes(live.storage_used_bytes) : "—" },
     { label: "Primary disk capacity", value: live && live.disk_total_bytes ? formatBytes(live.disk_total_bytes) : "—" },
-    { label: "Primary disk free", value: live && live.disk_total_bytes ? formatBytes(live.disk_free_bytes) : "—" },
     { label: "Items needing attention", value: live ? formatCount(live.photos_failed) : "—" },
   ];
 
@@ -83,6 +84,10 @@ export default function StoragePage() {
         <p className="matrix-label">Storage / local disks</p>
         <h1 className="mt-1 text-2xl font-semibold">Disk usage</h1>
         {live?.collected_at ? <p className="mt-2 font-mono text-xs text-muted-foreground">Measured on your server {new Date(live.collected_at).toLocaleString()}{live.stale ? " · last available reading" : ""}</p> : null}
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          <div className="matrix-panel p-6"><p className="matrix-label">Fotoro originals / used</p><p className="mt-5 font-mono text-4xl text-foreground">{live ? formatBytes(live.media_bytes) : "—"}</p><p className="mt-3 text-xs text-muted-foreground">Size of media files stored in your library</p></div>
+          <div className="matrix-panel p-6"><p className="matrix-label">Primary disk / available</p><p className="mt-5 font-mono text-4xl text-foreground">{live && live.disk_total_bytes ? formatBytes(live.disk_free_bytes) : "—"}</p><p className="mt-3 text-xs text-muted-foreground">Space available for new media on the primary disk</p></div>
+        </div>
         <dl className="matrix-panel mt-8 divide-y divide-border">
           {rows.map((r) => (
             <div key={r.label} className="flex justify-between px-5 py-4 text-sm">

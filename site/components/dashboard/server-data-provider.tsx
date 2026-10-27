@@ -37,43 +37,78 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
   const [stats, setStats] = React.useState<ServerLibraryStats | null>(null);
   const [devices, setDevices] = React.useState<ServerDevice[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const stateRef = React.useRef<ConnectivityState>("checking");
+  const failedProbes = React.useRef(0);
+  const refreshInFlight = React.useRef<Promise<void> | null>(null);
 
-  const refresh = React.useCallback(async () => {
-    const t = await getValidAccessToken();
-    setToken(t);
-    if (!t) {
-      setOnline("offline");
-      setConnectError("Session expired — sign in again.");
-      setStats(null);
-      setDevices([]);
+  const refresh = React.useCallback((): Promise<void> => {
+    if (refreshInFlight.current) return refreshInFlight.current;
+    const run = async () => {
+      const t = await getValidAccessToken();
+      setToken(t);
+      if (!t) {
+        stateRef.current = "offline";
+        setOnline("offline");
+        setConnectError("Session expired — sign in again.");
+        setStats(null);
+        setDevices([]);
+        setLoading(false);
+        return;
+      }
+
+      await syncProxyCookie(t);
+
+      const conn = await checkServerStatus(null, t);
+      if (conn.state !== "online") {
+        failedProbes.current++;
+        // A wake-up or one lost relay response should not make an open library
+        // flash offline and discard its measured data.
+        if (stateRef.current === "online" && failedProbes.current < 2) {
+          setLoading(false);
+          return;
+        }
+        stateRef.current = "offline";
+        setOnline("offline");
+        setConnectError(conn.error ?? null);
+        setStats(null);
+        setDevices([]);
+        setLoading(false);
+        return;
+      }
+
+      failedProbes.current = 0;
+      stateRef.current = "online";
+      setOnline("online");
+      setConnectError(null);
+      const [nextStats, nextDevices] = await Promise.allSettled([
+        fetchLibraryStats(t),
+        fetchServerDevices(t),
+      ]);
+      if (nextStats.status === "fulfilled") setStats(nextStats.value);
+      if (nextDevices.status === "fulfilled") setDevices(nextDevices.value);
       setLoading(false);
-      return;
-    }
-
-    setOnline("checking");
-    await syncProxyCookie(t);
-
-    const conn = await checkServerStatus(null, t);
-    setOnline(conn.state);
-    setConnectError(conn.error ?? null);
-
-    if (conn.state !== "online") {
-      setStats(null);
-      setDevices([]);
-      setLoading(false);
-      return;
-    }
-
-    const [s, d] = await Promise.all([fetchLibraryStats(t), fetchServerDevices(t)]);
-    setStats(s);
-    setDevices(d);
-    setLoading(false);
+    };
+    refreshInFlight.current = run().finally(() => {
+      refreshInFlight.current = null;
+    });
+    return refreshInFlight.current;
   }, []);
 
   React.useEffect(() => {
     void refresh();
-    const id = setInterval(() => void refresh(), 90_000);
-    return () => clearInterval(id);
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 90_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    window.addEventListener("online", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("online", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [refresh]);
 
   return (

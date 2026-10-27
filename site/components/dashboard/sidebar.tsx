@@ -33,12 +33,12 @@ export function DashboardSidebar() {
   const { stats, devices, online } = useServerData();
   const live = online === "online" && stats;
 
-  const usedLabel = live ? formatBytes(stats.storage_used_bytes) : "—";
+  const usedLabel = live ? formatBytes(stats.media_bytes) : "—";
   const totalLabel =
-    live && stats.disk_total_bytes ? formatBytes(stats.disk_total_bytes) : "—";
+    live && stats.disk_total_bytes ? formatBytes(stats.disk_free_bytes) : "—";
   const pct =
     live && stats.disk_total_bytes
-      ? Math.min(100, Math.round((stats.storage_used_bytes / stats.disk_total_bytes) * 100))
+      ? Math.min(100, Math.round((stats.media_bytes / stats.disk_total_bytes) * 100))
       : 0;
 
   const deviceBadge =
@@ -91,7 +91,7 @@ export function DashboardSidebar() {
 
       <div className="mt-6 border border-border bg-background/40 bg-dot-grid p-3">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-foreground">Storage</p>
+          <p className="text-xs font-medium text-foreground">Media / free disk</p>
           <p className="text-[10px] text-muted-foreground">
             {usedLabel} / {totalLabel}
           </p>
@@ -104,7 +104,7 @@ export function DashboardSidebar() {
         </div>
         <p className="mt-2 text-[10px] text-muted-foreground">
           {live
-            ? `${formatCount(stats.photos_total)} items · ${formatCount(stats.backup_verified)} backed up`
+            ? `${formatCount(stats.photos_total)} items · ${pct}% of disk used by Fotoro media`
             : online === "online" ? "Metrics unavailable" : "Connect your server for live figures"}
         </p>
       </div>

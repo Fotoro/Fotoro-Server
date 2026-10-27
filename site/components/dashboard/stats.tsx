@@ -18,8 +18,8 @@ export function DashboardStats() {
     },
     {
       icon: Database,
-      label: "Library footprint",
-      value: live ? formatBytes(stats.storage_used_bytes) : "—",
+      label: "Media used",
+      value: live ? formatBytes(stats.media_bytes) : "—",
       delta: live && stats.disk_total_bytes
         ? `${formatBytes(stats.disk_free_bytes)} free`
         : unavailable,
