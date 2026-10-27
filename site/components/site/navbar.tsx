@@ -41,11 +41,11 @@ export function Navbar() {
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-all duration-300",
         scrolled
-          ? "border-b border-border/70 glass"
-          : "border-b border-transparent"
+          ? "border-b border-border bg-background/95 backdrop-blur"
+          : "border-b border-border bg-background/90"
       )}
     >
-      <div className="container-tight flex h-14 items-center justify-between gap-6">
+      <div className="container-tight flex h-16 items-center justify-between gap-6">
         <div className="flex items-center gap-8">
           <Logo />
           <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
@@ -54,10 +54,10 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-sm transition-colors",
+                  "px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors",
                   pathname === link.href || pathname.startsWith(`${link.href}/`)
-                    ? "bg-accent text-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    ? "text-[hsl(var(--brand))]"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {link.label}
@@ -97,7 +97,7 @@ export function Navbar() {
           )}
           <Button asChild size="sm" className="group">
             <Link href="/download">
-              Download
+              Get started
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </Button>
@@ -143,7 +143,7 @@ export function Navbar() {
               </nav>
               <div className="mt-6 flex flex-col gap-2">
                 <Button asChild>
-                  <Link href="/download">Download Fotoro</Link>
+                  <Link href="/download">Get started</Link>
                 </Button>
                 <Button asChild variant="outline">
                   <Link

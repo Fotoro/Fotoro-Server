@@ -50,7 +50,7 @@ export function DocsSidebar() {
   }, []);
 
   return (
-    <nav className="sticky top-20 hidden h-[calc(100vh-6rem)] w-60 shrink-0 overflow-y-auto pr-3 md:block" aria-label="Docs">
+    <nav className="sticky top-20 hidden h-[calc(100vh-6rem)] w-60 shrink-0 overflow-y-auto border-r border-border pr-5 md:block" aria-label="Docs">
       {SECTIONS.map((section) => (
         <div key={section.heading} className="mb-6">
           <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
@@ -63,8 +63,8 @@ export function DocsSidebar() {
                   href={`#${item.id}`}
                   className={`block rounded-md px-3 py-1.5 text-sm transition-colors ${
                     active === item.id
-                      ? "bg-accent text-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      ? "border-l-2 border-[hsl(var(--brand))] bg-accent text-foreground"
+                      : "border-l-2 border-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
                   }`}
                 >
                   {item.label}

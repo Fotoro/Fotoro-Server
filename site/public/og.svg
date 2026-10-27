@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Fotoro — keep the whole picture">
+  <defs>
+    <pattern id="paperDots" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#efe6d4" opacity=".16"/></pattern>
+    <pattern id="printDots" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="5" cy="5" r="2.4" fill="#121619" opacity=".6"/></pattern>
+    <pattern id="imageDots" width="10" height="10" patternUnits="userSpaceOnUse"><circle cx="5" cy="5" r="2.8" fill="#efe6d4" opacity=".82"/></pattern>
+  </defs>
+  <rect width="1200" height="630" fill="#121619"/>
+  <rect width="1200" height="630" fill="url(#paperDots)"/>
+  <line x1="60" y1="85" x2="1140" y2="85" stroke="#675f53"/>
+  <rect x="60" y="39" width="42" height="42" fill="#f58061"/>
+  <g fill="#121619"><circle cx="71" cy="50" r="3"/><circle cx="82" cy="50" r="3"/><circle cx="93" cy="50" r="3"/><circle cx="71" cy="61" r="3"/><circle cx="82" cy="61" r="4"/><circle cx="93" cy="61" r="3"/><circle cx="71" cy="72" r="3"/><circle cx="82" cy="72" r="3"/><circle cx="93" cy="72" r="3"/></g>
+  <text x="116" y="72" fill="#efe6d4" font-size="38" font-weight="700" font-family="Arial, sans-serif" letter-spacing="-2">fotoro<tspan fill="#f58061">.</tspan></text>
+  <text x="60" y="168" fill="#f58061" font-size="19" font-weight="700" font-family="monospace" letter-spacing="5">AN ARCHIVE ON YOUR TERMS</text>
+  <text x="55" y="300" fill="#efe6d4" font-size="100" font-weight="700" font-family="Arial, sans-serif" letter-spacing="-7">Keep the</text>
+  <text x="55" y="406" fill="#f58061" font-size="100" font-weight="700" font-family="Arial, sans-serif" letter-spacing="-7">whole picture.</text>
+  <text x="60" y="487" fill="#bbb4a6" font-size="24" font-family="Arial, sans-serif">Your photos and videos. Your own server.</text>
+  <line x1="60" y1="555" x2="1140" y2="555" stroke="#675f53"/>
+  <text x="60" y="590" fill="#bbb4a6" font-size="17" font-family="monospace" letter-spacing="2">IMPORT / PROTECT / EXPLORE</text>
+  <circle cx="1040" cy="310" r="175" fill="#f58061"/>
+  <circle cx="1040" cy="310" r="175" fill="url(#printDots)"/>
+  <g transform="translate(845 130) rotate(-11 120 175)"><rect x="0" y="0" width="240" height="350" fill="#121619" stroke="#efe6d4" stroke-width="3"/><rect x="24" y="32" width="192" height="255" fill="url(#imageDots)"/><text x="26" y="327" fill="#efe6d4" font-size="20" font-family="monospace">F / 001</text></g>
+</svg>

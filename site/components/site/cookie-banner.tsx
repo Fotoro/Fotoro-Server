@@ -33,21 +33,19 @@ export function CookieBanner() {
     <div
       role="dialog"
       aria-label="Privacy notice"
-      className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-2xl rounded-xl border border-border glass p-4 shadow-2xl sm:bottom-5 sm:p-5"
+      className="matrix-panel fixed inset-x-3 bottom-3 z-50 mx-auto max-w-2xl p-4 shadow-2xl sm:bottom-5 sm:p-5"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
         <div className="hidden size-9 shrink-0 items-center justify-center rounded-md border border-border bg-card sm:flex">
           <Lock className="size-4 text-foreground" />
         </div>
         <div className="flex-1 text-sm leading-relaxed text-muted-foreground">
-          <p className="font-medium text-foreground">No cookies. No trackers. Promise.</p>
+          <p className="font-medium text-foreground">A note on sign-in and storage</p>
           <p className="mt-1">
-            Fotoro doesn&apos;t use analytics or third-party cookies on this site. The only
-            data we ever store stays on the server <em>you</em> control. Read the{" "}
+            Fotoro uses a session cookie to connect your browser to your server. Account sign-in and node routing use Supabase; original media stays on your configured storage. Read the{" "}
             <Link href="/docs#privacy" className="text-foreground underline-offset-4 hover:underline">
               privacy notice
-            </Link>{" "}
-            for the full story.
+            </Link> for details.
           </p>
         </div>
         <div className="flex items-center gap-2 self-end sm:self-start">

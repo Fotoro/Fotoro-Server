@@ -17,7 +17,7 @@ const mono = Geist_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#06060a",
+  themeColor: "#121619",
   width: "device-width",
   initialScale: 1,
   colorScheme: "dark",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     siteName: SITE.name,
     images: [
       {
-        url: "/og.png",
+        url: "/og.svg",
         width: 1200,
         height: 630,
         alt: `${SITE.name} — ${SITE.tagline}`,
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
     creator: SITE.twitter,
-    images: ["/og.png"],
+    images: ["/og.svg"],
   },
   robots: {
     index: true,

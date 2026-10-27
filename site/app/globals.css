@@ -4,37 +4,37 @@
 
 @layer base {
   :root {
-    /* Pure black & white design tokens */
-    --background: 0 0% 0%;
-    --foreground: 0 0% 96%;
+    /* Ink, paper and signal orange. */
+    --background: 216 14% 8%;
+    --foreground: 43 31% 91%;
 
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 96%;
+    --card: 210 12% 12%;
+    --card-foreground: 43 31% 91%;
 
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 96%;
+    --popover: 210 12% 12%;
+    --popover-foreground: 43 31% 91%;
 
-    --primary: 0 0% 96%;
-    --primary-foreground: 0 0% 6%;
+    --primary: 43 31% 91%;
+    --primary-foreground: 216 14% 8%;
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 96%;
+    --secondary: 212 11% 18%;
+    --secondary-foreground: 43 31% 91%;
 
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 62%;
+    --muted: 212 11% 18%;
+    --muted-foreground: 40 10% 67%;
 
-    --accent: 0 0% 14%;
-    --accent-foreground: 0 0% 96%;
+    --accent: 214 10% 20%;
+    --accent-foreground: 43 31% 91%;
 
-    --destructive: 0 0% 92%;
-    --destructive-foreground: 0 0% 6%;
+    --destructive: 10 83% 63%;
+    --destructive-foreground: 216 14% 8%;
 
-    --border: 0 0% 14%;
-    --input: 0 0% 14%;
-    --ring: 0 0% 96%;
+    --border: 41 11% 28%;
+    --input: 41 11% 28%;
+    --ring: 15 88% 65%;
 
-    --brand: 0 0% 96%;
-    --radius: 0.75rem;
+    --brand: 15 88% 65%;
+    --radius: 0.5rem;
 
     color-scheme: dark;
   }
@@ -52,10 +52,12 @@
     @apply bg-background text-foreground font-sans;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    background-image: radial-gradient(hsl(var(--foreground) / 0.055) 0.8px, transparent 0.9px);
+    background-size: 18px 18px;
   }
 
   ::selection {
-    background: hsl(0 0% 100% / 0.18);
+    background: hsl(var(--brand) / 0.45);
     color: hsl(var(--foreground));
   }
 
@@ -76,13 +78,13 @@
 }
 
 @layer components {
-  /* Subtle grid background reused across hero / sections */
+  /* Dot matrix fields are CSS-native, so they stay sharp at every size. */
   .bg-dot-grid {
     background-image: radial-gradient(
-      hsl(var(--border) / 0.6) 1px,
+      hsl(var(--foreground) / 0.18) 1.5px,
       transparent 1px
     );
-    background-size: 24px 24px;
+    background-size: 15px 15px;
   }
 
   .bg-line-grid {
@@ -127,7 +129,7 @@
   .glow-ring {
     box-shadow:
       0 0 0 1px hsl(var(--border)),
-      0 0 24px -4px hsl(0 0% 100% / 0.18);
+      0 0 24px -4px hsl(var(--brand) / 0.18);
   }
 
   .ring-soft {
@@ -144,6 +146,116 @@
       hsl(var(--border)) 80%,
       transparent
     );
+  }
+
+  .matrix-label {
+    @apply font-mono text-[11px] font-medium uppercase tracking-[0.18em];
+    color: hsl(var(--brand));
+  }
+
+  .matrix-panel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--card));
+  }
+
+  .matrix-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(hsl(var(--foreground) / 0.12) 0.8px, transparent 1px);
+    background-size: 12px 12px;
+    -webkit-mask-image: linear-gradient(120deg, transparent 38%, black);
+    mask-image: linear-gradient(120deg, transparent 38%, black);
+  }
+
+  .matrix-paper {
+    color: hsl(var(--background));
+    background-color: hsl(var(--foreground));
+    background-image: radial-gradient(hsl(var(--background) / 0.16) 0.9px, transparent 1px);
+    background-size: 12px 12px;
+  }
+
+  .matrix-signal {
+    color: hsl(var(--background));
+    background-color: hsl(var(--brand));
+    background-image: radial-gradient(hsl(var(--background) / 0.28) 1px, transparent 1.3px);
+    background-size: 12px 12px;
+  }
+
+  .matrix-art {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    min-height: 520px;
+    border: 1px solid hsl(var(--border));
+    background: hsl(210 12% 11%);
+  }
+
+  .matrix-art::before {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    background-image: radial-gradient(hsl(var(--foreground) / 0.27) 2px, transparent 2.4px);
+    background-size: 14px 14px;
+    transform: rotate(-15deg);
+    -webkit-mask-image: radial-gradient(circle at 62% 50%, black 7%, transparent 61%);
+    mask-image: radial-gradient(circle at 62% 50%, black 7%, transparent 61%);
+  }
+
+  .matrix-art::after {
+    content: "";
+    position: absolute;
+    width: 380px;
+    height: 380px;
+    right: -70px;
+    top: 48px;
+    border-radius: 50%;
+    background-color: hsl(var(--brand));
+    background-image: radial-gradient(hsl(var(--background) / 0.5) 2px, transparent 2.5px);
+    background-size: 11px 11px;
+    box-shadow: -28px 28px 0 hsl(var(--background)), -29px 29px 0 1px hsl(var(--border));
+  }
+
+  .matrix-art__frame {
+    position: absolute;
+    z-index: 1;
+    left: 12%;
+    top: 18%;
+    width: 54%;
+    aspect-ratio: 0.83;
+    border: 2px solid hsl(var(--foreground));
+    transform: rotate(-11deg);
+    box-shadow: 14px 14px 0 hsl(var(--background)), 15px 15px 0 1px hsl(var(--foreground) / 0.6);
+    background: hsl(var(--background));
+  }
+
+  .matrix-art__frame::before {
+    content: "";
+    position: absolute;
+    inset: 17% 12%;
+    background-image: radial-gradient(hsl(var(--foreground) / 0.85) 2.4px, transparent 2.8px);
+    background-size: 10px 10px;
+    -webkit-mask-image: radial-gradient(circle at 52% 48%, black 20%, transparent 70%);
+    mask-image: radial-gradient(circle at 52% 48%, black 20%, transparent 70%);
+  }
+
+  .matrix-art__frame::after {
+    content: "F / 001";
+    position: absolute;
+    left: 12%;
+    bottom: 7%;
+    font: 600 13px var(--font-mono), monospace;
+    letter-spacing: 0.12em;
+    color: hsl(var(--foreground));
+  }
+
+  .dashboard-grid {
+    background-color: hsl(var(--background));
+    background-image: radial-gradient(hsl(var(--foreground) / 0.07) 0.8px, transparent 1px);
+    background-size: 16px 16px;
   }
 }
 

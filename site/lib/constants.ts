@@ -7,7 +7,6 @@ export const SITE = {
   github: "https://github.com/Fotoro/Fotoro-Server",
   twitter: "@fotoroapp",
   email: "hello@fotoro.app",
-  version: "0.4.0",
 } as const;
 
 export const NAV_LINKS = [

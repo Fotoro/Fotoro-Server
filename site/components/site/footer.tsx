@@ -5,8 +5,8 @@ import { FOOTER_LINKS, SITE } from "@/lib/constants";
 
 export function Footer() {
   return (
-    <footer className="relative mt-32 border-t border-border">
-      <div className="pointer-events-none absolute inset-x-0 -top-24 mx-auto h-24 max-w-6xl bg-brand-glow opacity-60" />
+    <footer className="relative mt-20 border-t border-border bg-card/70">
+      <div className="pointer-events-none absolute right-0 top-0 size-48 bg-dot-grid opacity-40" />
       <div className="container-tight pt-16 pb-10">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div className="space-y-4">
@@ -56,17 +56,14 @@ export function Footer() {
 
         <div className="mt-14 flex flex-col items-start justify-between gap-4 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
           <p>
-            © {new Date().getFullYear()} {SITE.name}. Built for people who own their memories.
+            © {new Date().getFullYear()} {SITE.name}. Your photographs, on your terms.
           </p>
           <div className="flex items-center gap-5">
             <Link href="/docs#privacy" className="hover:text-foreground">
               Privacy
             </Link>
-            <Link href="/docs#license" className="hover:text-foreground">
-              License (MIT)
-            </Link>
             <span className="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              v{SITE.version}
+              Source available
             </span>
           </div>
         </div>
