@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     const baseUrl = (node.public_url || node.tailnet_url || "").replace(/\/$/, "");
     if (!baseUrl) {
       return NextResponse.json(
-        { error: "Server has no public URL yet — start ./fotoro server" },
+        { error: "Server has no public URL yet — run ./fotoroctl start" },
         { status: 503 }
       );
     }

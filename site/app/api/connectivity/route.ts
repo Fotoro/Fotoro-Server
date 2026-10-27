@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     if (hint.includes("No server registered") || hint.includes("No relay configured")) {
       hint = "No server linked to your account. Run ./fotoro setup then ./fotoro nodesync.";
     } else if (!hint || hint === raw) {
-      hint = "Cannot reach your home server through the secure relay. Run ./fotoro server.";
+      hint = "Cannot reach your home server through the secure relay. Run ./fotoroctl start and check Tailscale.";
     }
     return NextResponse.json({ online: false, error: hint });
   }

@@ -150,7 +150,7 @@ export default function DashboardPage() {
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {connectError ||
-                    "Run ./fotoro server on your machine after setup."}
+                    "Run ./fotoroctl start on your machine after setup."}
                 </p>
               </div>
             )}

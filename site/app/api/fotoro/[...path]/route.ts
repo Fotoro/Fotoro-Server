@@ -53,7 +53,7 @@ async function proxyToRelay(
     return NextResponse.json(
       {
         error: sanitizeRelayError(msg) ||
-          "Cannot reach your home server. Run ./fotoro server and ./fotoro nodesync.",
+          "Cannot reach your home server. Run ./fotoroctl start and ./fotoro nodesync.",
       },
       { status: 502 }
     );

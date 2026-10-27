@@ -40,7 +40,7 @@ const groups = [
     ["Linked-node checks", "Connectivity and health views help identify a server that has gone offline."],
   ] },
   { id: "operate", index: "06", icon: SlidersHorizontal, name: "Run the system", summary: "A small set of tools for a real machine with real storage.", features: [
-    ["Linux desktop launcher", "Run ./fotoro app to start the backend and desktop interface; ./fotoro server runs the API alone."],
+    ["Manual on demand server", "Run ./fotoroctl start or stop. A user socket wakes the API for requests and lets it sleep when idle."],
     ["Scheduled processing", "Configure the local queue and batch size, or trigger processing manually."],
     ["Measured dashboard", "Media, previews, disks, devices, backups and queue figures are measured on the host and saved to SQLite."],
     ["Diagnostics", "Inspect database, storage, search index and Tailscale state from the authenticated dashboard."],

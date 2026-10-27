@@ -26,8 +26,9 @@ export default function DocsPage() {
 cd Fotoro-Model
 go build -o fotoro .
 ./fotoro setup
-./fotoro server`} />
-        <p><code>./fotoro app</code> starts the server with the desktop UI when its Qt dependencies are available. <code>./fotoro nodesync</code> re-publishes your node record if the route changes.</p>
+./fotoroctl start`} />
+        <p>Setup opens a browser for Google sign in, then connects Tailscale and links this host. <code>./fotoroctl start</code> is manual: it starts a user socket, wakes the API on demand, and lets the API exit after ten idle minutes. Use <code>./fotoroctl stop</code> to turn off both. Nothing is enabled at boot.</p>
+        <p><code>./fotoro app</code> starts the desktop UI when its Qt dependencies are available. <code>./fotoro nodesync</code> re-publishes your node record if the route changes.</p>
       </Section>
       <Section id="first-sync" title="Add your first media">
         <p>Use <code>./fotoro ingest /path/to/photos</code> to process an existing folder. The resumable upload API is available for testing a device offload flow. The Android client is not released yet.</p>
@@ -45,7 +46,7 @@ POST /api/v1/uploads
 GET  /api/v1/device-assets/status`} />
       </Section>
       <Section id="troubleshooting" title="Troubleshooting">
-        <p>If the dashboard cannot reach your host, confirm <code>./fotoro server</code> is running, check <code>./fotoro tailscale status</code>, then run <code>./fotoro nodesync</code>. The website host must be able to reach the server route on the tailnet, or run beside the Go server with a loopback proxy configuration.</p>
+        <p>If the dashboard cannot reach your host, run <code>./fotoroctl status</code>, check <code>./fotoro tailscale status</code>, then run <code>./fotoro nodesync</code>. The website host must be on the same tailnet, run beside the Go server with a loopback proxy, or use an explicitly enabled public Funnel relay. A public website host cannot reach a private tailnet address on its own.</p>
         <p>If previews are missing for imported media, run <code>./fotoro backfill-thumbs</code>.</p>
       </Section>
       <Section id="privacy" title="Where data goes">
