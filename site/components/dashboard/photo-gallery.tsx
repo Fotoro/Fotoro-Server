@@ -444,6 +444,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
 
       {selected ? (
         <PhotoViewer
+          key={selected.id}
           photo={selected}
           previous={selectedIndex > 0 ? photos[selectedIndex - 1] : undefined}
           next={selectedIndex >= 0 ? photos[selectedIndex + 1] : undefined}

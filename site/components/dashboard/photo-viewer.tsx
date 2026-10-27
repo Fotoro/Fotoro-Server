@@ -35,6 +35,8 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
   const [offset, setOffset] = React.useState({ x: 0, y: 0 });
   const [previewSrc, setPreviewSrc] = React.useState(photo.preview || photo.thumbnail);
   const [previewReady, setPreviewReady] = React.useState(false);
+  const [detailSrc, setDetailSrc] = React.useState(photo.detail || "");
+  const [detailReady, setDetailReady] = React.useState(false);
   const [originalSrc, setOriginalSrc] = React.useState(photo.original || photo.originalFallback || "");
   const [requestOriginal, setRequestOriginal] = React.useState(false);
   const [originalReady, setOriginalReady] = React.useState(false);
@@ -46,17 +48,23 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
     setOffset({ x: 0, y: 0 });
     setPreviewSrc(photo.preview || photo.thumbnail);
     setPreviewReady(false);
+    setDetailSrc(photo.detail || "");
+    setDetailReady(false);
     setOriginalSrc(photo.original || photo.originalFallback || "");
     setRequestOriginal(false);
     setOriginalReady(false);
     pointers.current.clear();
     drag.current = null;
     pinch.current = null;
-    // A quick browse fetches only display previews. Pausing on a photo loads
-    // its original in the background so detail is ready when the user zooms.
-    const timer = window.setTimeout(() => setRequestOriginal(true), 850);
-    return () => window.clearTimeout(timer);
-  }, [photo.id, photo.preview, photo.thumbnail, photo.original, photo.originalFallback]);
+    // Older images without a 2048 px tier still load the original on pause.
+    // With that tier available, the original is only needed at deep zoom.
+    const timer = !isPhoto || photo.detail ? undefined : window.setTimeout(() => setRequestOriginal(true), 850);
+    return () => { if (timer !== undefined) window.clearTimeout(timer); };
+  }, [photo.id, photo.preview, photo.thumbnail, photo.detail, photo.original, photo.originalFallback, isPhoto]);
+
+  React.useEffect(() => {
+    if (isPhoto && zoom > 1.75) setRequestOriginal(true);
+  }, [isPhoto, zoom]);
 
   React.useEffect(() => {
     for (const preview of [previousPreview, nextPreview]) {
@@ -69,7 +77,6 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
 
   const changeZoom = React.useCallback((factor: number) => {
     if (!isPhoto) return;
-    if (factor > 1) setRequestOriginal(true);
     setZoom((current) => {
       const value = clampZoom(current * factor);
       return value;
@@ -131,7 +138,7 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
       const distance = Math.hypot(a.x - b.x, a.y - b.y);
       const value = clampZoom(pinch.current.zoom * distance / Math.max(1, pinch.current.distance));
       setZoom(value);
-      if (value > 1) setRequestOriginal(true);
+      if (value > 1.75) setRequestOriginal(true);
     } else if (drag.current && zoom > 1) {
       const stage = stageRef.current;
       const maxX = (stage?.clientWidth ?? 0) * (zoom - 1) / 2;
@@ -188,6 +195,7 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
             <div className="relative size-full" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, transformOrigin: "center", cursor: zoom > 1 ? "grab" : "zoom-in" }}>
               {photo.thumbnail && !previewReady ? <img src={photo.thumbnail} alt="" referrerPolicy="no-referrer" className="absolute inset-0 size-full object-contain blur-lg" /> : null}
               {previewSrc ? <img key={`${photo.id}:preview`} src={previewSrc} alt="" referrerPolicy="no-referrer" className="absolute inset-0 size-full object-contain" onLoad={() => setPreviewReady(true)} onError={() => { if (photo.previewFallback && previewSrc !== photo.previewFallback) setPreviewSrc(photo.previewFallback); else setPreviewSrc(""); }} /> : null}
+              {detailSrc ? <img key={`${photo.id}:detail`} src={detailSrc} alt="" referrerPolicy="no-referrer" className={`absolute inset-0 size-full object-contain transition-opacity duration-200 ${detailReady ? "opacity-100" : "opacity-0"}`} onLoad={() => setDetailReady(true)} onError={() => { if (photo.detailFallback && detailSrc !== photo.detailFallback) setDetailSrc(photo.detailFallback); else { setDetailSrc(""); setRequestOriginal(true); } }} /> : null}
               {requestOriginal && originalSrc ? <img key={`${photo.id}:original`} src={originalSrc} alt={title} referrerPolicy="no-referrer" className={`absolute inset-0 size-full object-contain transition-opacity duration-200 ${originalReady ? "opacity-100" : "opacity-0"}`} onLoad={() => setOriginalReady(true)} onError={() => { if (photo.originalFallback && originalSrc !== photo.originalFallback) setOriginalSrc(photo.originalFallback); else setOriginalSrc(""); }} /> : null}
               {!previewSrc && !originalReady ? <div className="absolute inset-0 flex items-center justify-center text-sm text-white/60">Preview unavailable</div> : null}
             </div>
@@ -197,7 +205,7 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
       </div>
 
       <footer className="flex min-h-12 flex-wrap items-center gap-x-5 gap-y-1 border-t border-white/15 px-4 py-2 font-mono text-[11px] text-white/60" onClick={(event) => event.stopPropagation()}>
-        <span>{isVideo ? "Video" : isDocument ? "Document" : originalReady ? "Original resolution" : "Display preview"}</span>
+        <span>{isVideo ? "Video" : isDocument ? "Document" : originalReady ? "Original resolution" : detailReady ? "Display detail" : "Display preview"}</span>
         {photo.width && photo.height ? <span>{photo.width} × {photo.height}</span> : null}
         {photo.fileSize ? <span>{formatBytes(photo.fileSize)}</span> : null}
         {photo.taken_at ? <span>{new Date(photo.taken_at).toLocaleString()}</span> : null}

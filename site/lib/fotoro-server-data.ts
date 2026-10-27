@@ -62,7 +62,9 @@ interface ApiMediaRow {
   thumbnail_url?: string;
   direct_thumbnail_url?: string;
   direct_preview_url?: string;
+  direct_detail_url?: string;
   direct_content_url?: string;
+  detail_url?: string;
   original_name?: string;
   file_size?: number;
   width?: number;
@@ -142,6 +144,7 @@ function mapApiMedia(row: ApiMediaRow): GalleryPhoto {
     ? proxyMediaUrl(row.thumbnail_url.replace("size=small", "size=medium"))
     : "";
   const originalFallback = proxyMediaUrl(`/api/v1/media/${encodeURIComponent(row.id)}/content`);
+  const detailFallback = row.detail_url ? proxyMediaUrl(row.detail_url) : "";
   return {
     id: row.id,
     caption: "",
@@ -154,6 +157,8 @@ function mapApiMedia(row: ApiMediaRow): GalleryPhoto {
     thumbnailFallback,
     preview: row.direct_preview_url || previewFallback,
     previewFallback,
+    detail: row.direct_detail_url || detailFallback,
+    detailFallback,
     original: row.direct_content_url || originalFallback,
     originalFallback,
     originalName: row.original_name,

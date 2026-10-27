@@ -21,6 +21,8 @@ export interface GalleryPhoto {
   thumbnailFallback?: string;
   preview?: string;
   previewFallback?: string;
+  detail?: string;
+  detailFallback?: string;
   original?: string;
   originalFallback?: string;
   originalName?: string;
