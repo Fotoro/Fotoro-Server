@@ -1,16 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { Film, ImageIcon, Loader2, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { fetchPhotosPage } from "@/lib/fotoro-server-data";
-import { photoUrl, searchPhotos, type GalleryPhoto } from "@/lib/fotoro-local";
+import { searchPhotos, type GalleryPhoto } from "@/lib/fotoro-local";
 import { useServerData } from "@/components/dashboard/server-data-provider";
+import { PhotoViewer } from "@/components/dashboard/photo-viewer";
 
 const PAGE_SIZE = 100;
-const EAGER_COUNT = 24;
+const EAGER_COUNT = 8;
 const GRID_GAP = 8;
 const HEADER_HEIGHT = 36;
 
@@ -32,18 +32,22 @@ function mergePhotos(prev: GalleryPhoto[], next: GalleryPhoto[]): GalleryPhoto[]
 
 function LazyThumb({ photo, index }: { photo: GalleryPhoto; index: number }) {
   const eager = index < EAGER_COUNT;
+  const [src, setSrc] = React.useState(photo.thumbnail);
+  React.useEffect(() => setSrc(photo.thumbnail), [photo.thumbnail]);
 
   return (
     <div className="size-full bg-muted/20">
-      {photo.thumbnail ? (
+      {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={photo.thumbnail}
+          src={src}
           alt=""
           className="size-full object-cover"
           loading={eager ? "eager" : "lazy"}
           decoding="async"
-          fetchPriority={index < 8 ? "high" : "auto"}
+          fetchPriority={index < 4 ? "high" : "auto"}
+          referrerPolicy="no-referrer"
+          onError={() => setSrc(src !== photo.thumbnailFallback ? photo.thumbnailFallback || "" : "")}
         />
       ) : (
         <div className="flex size-full items-center justify-center text-muted-foreground">
@@ -131,6 +135,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const scrollFrameRef = React.useRef<number | null>(null);
   const latestScrollTopRef = React.useRef(0);
+  const pendingNextRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     const element = scrollRef.current;
@@ -230,6 +235,23 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
     void loadPage(pageRef.current + 1, true);
   }, [photos.length, loadPage]);
 
+  const selectedIndex = selected ? photos.findIndex((photo) => photo.id === selected.id) : -1;
+  const hasMore = !query && photos.length < total;
+
+  React.useEffect(() => {
+    const pending = pendingNextRef.current;
+    if (!pending) return;
+    const index = photos.findIndex((photo) => photo.id === pending);
+    if (index >= 0 && index + 1 < photos.length) {
+      pendingNextRef.current = null;
+      setSelected(photos[index + 1]);
+    }
+  }, [photos]);
+
+  React.useEffect(() => {
+    if (selectedIndex >= photos.length - 5 && hasMore) loadMore();
+  }, [selectedIndex, photos.length, hasMore, loadMore]);
+
   React.useEffect(() => {
     if (!token) return;
     pageRef.current = 1;
@@ -270,6 +292,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
     e.preventDefault();
     if (!token) return;
     prefetchRef.current.clear();
+    setSelected(null);
     if (!query.trim()) {
       pageRef.current = 1;
       void loadPage(1, false);
@@ -296,7 +319,19 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
   if (!token) return null;
 
   const displayError = error ?? connectError;
-  const hasMore = !query && photos.length < total;
+
+  function showPrevious() {
+    if (selectedIndex > 0) setSelected(photos[selectedIndex - 1]);
+  }
+
+  function showNext() {
+    if (selectedIndex >= 0 && selectedIndex + 1 < photos.length) {
+      setSelected(photos[selectedIndex + 1]);
+    } else if (selected && hasMore) {
+      pendingNextRef.current = selected.id;
+      loadMore();
+    }
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -405,74 +440,19 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
         </div>
       </div>
 
-      <AnimatePresence>
-        {selected ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
-            onClick={() => setSelected(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.96 }}
-              animate={{ scale: 1 }}
-              className="flex max-h-[92vh] max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-card"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {selected.media_kind === "video" ? (
-                <video src={photoUrl(null, selected.id)} controls preload="metadata" className="max-h-[min(60vh,520px)] w-full" />
-              ) : (
-                <AuthenticatedImage key={selected.id} src={photoUrl(null, selected.id)} preview={selected.thumbnail.replace("size=small", "size=medium")} alt="" />
-              )}
-              <div className="border-t border-border px-4 py-3 text-sm">
-                <p className="font-medium text-foreground">
-                  {selected.caption?.trim() || "No description"}
-                </p>
-                {selected.category ? (
-                  <p className="mt-1 text-xs text-muted-foreground">{selected.category}</p>
-                ) : null}
-                {selected.safe_to_delete !== undefined ? (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {selected.safe_to_delete ? "Two copies verified · safe to delete from phone" : "Backup incomplete · keep the phone copy"}
-                  </p>
-                ) : null}
-              </div>
-            </motion.div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      {selected ? (
+        <PhotoViewer
+          photo={selected}
+          previous={selectedIndex > 0 ? photos[selectedIndex - 1] : undefined}
+          next={selectedIndex >= 0 ? photos[selectedIndex + 1] : undefined}
+          position={selectedIndex + 1}
+          total={total}
+          hasNext={selectedIndex + 1 < photos.length || hasMore}
+          onPrevious={showPrevious}
+          onNext={showNext}
+          onClose={() => { pendingNextRef.current = null; setSelected(null); }}
+        />
+      ) : null}
     </div>
   );
 });
-
-function AuthenticatedImage({ src, preview, alt }: { src: string; preview: string; alt: string }) {
-  const [failed, setFailed] = React.useState(false);
-  const [loaded, setLoaded] = React.useState(false);
-
-  if (failed) {
-    return (
-      <div className="flex h-[min(60vh,520px)] w-full items-center justify-center bg-muted/20 text-sm text-muted-foreground">
-        Failed to load image
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative flex min-h-[240px] items-center justify-center bg-black/20">
-      {preview && !loaded ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt="" className="absolute inset-0 size-full object-contain blur-sm" />
-      ) : null}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        className="relative max-h-[min(60vh,520px)] w-full object-contain"
-        decoding="async"
-        onLoad={() => setLoaded(true)}
-        onError={() => setFailed(true)}
-      />
-    </div>
-  );
-}

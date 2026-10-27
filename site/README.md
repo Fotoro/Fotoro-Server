@@ -19,6 +19,12 @@ Run `npm run build` and `npm start -- -H 127.0.0.1` on the same Linux host as Go
 
 A cloud-hosted website cannot reach a private Tailscale endpoint unless its server runtime also joins the tailnet. `FOTORO_ALLOW_TAILNET_RELAY=1` only enables this lookup on a tailnet-capable host. For a hosted dashboard, enabling Tailscale Funnel on the home host registers its `https://*.ts.net` URL as the relay route; the website accepts only that HTTPS origin and still requires owner or paired-device authentication. Set `FOTORO_DISABLE_PUBLIC_RELAY=1` on a private deployment that must never use Funnel.
 
+## Library delivery and storage figures
+
+The dashboard gets paginated timeline metadata through its authenticated `/api/fotoro/media` relay. Go returns short-lived, signed `direct_thumbnail_url`, `direct_preview_url`, and `direct_content_url` fields when its configured Tailscale Funnel URL is available. The browser fetches those image bytes directly from the home server, so a Vercel function does not sit in the hot path for every tile. The signatures cover the media ID, size variant, and expiry; the old authenticated proxy URLs remain as fallbacks. The grid renders only visible rows, fetches 100 metadata records at a time, and prefetches the next page. The viewer starts with a display-sized preview, then requests the original when the user pauses or zooms. Adjacent previews are prefetched for left and right navigation.
+
+The dashboard connectivity check uses `/api/v1/me`. Idempotent relay reads retry once when a sleeping socket wakes, and foreground checks refresh the state when the tab becomes visible. Session refresh is shared across concurrent requests and tabs. The storage card reads server-measured `media_bytes` for originals and `disk_free_bytes` for remaining space; preview cache and staging usage are shown separately. On an existing Go database, run `./fotoro reconcile-sizes` once if imported media has zero recorded file sizes.
+
 ## Check an end-to-end offload
 
 1. Run `./fotoroctl start`, start this website, sign in with the same owner account, and open `/dashboard/library`.
