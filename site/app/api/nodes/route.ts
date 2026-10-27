@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifySupabaseToken } from "@/lib/auth-verify";
-import { normalizeFotoroServerUrl } from "@/lib/fotoro-url";
+import { normalizeFotoroServerUrl, tailscaleFunnelOrigin } from "@/lib/fotoro-url";
 import { relayFetch, sanitizeRelayError } from "@/lib/fotoro-relay";
 
 /** Browser-safe node record — no funnel URL, tailscale IP, or magic DNS. */
@@ -85,6 +85,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing tailscale_ip" }, { status: 400 });
     }
 
+    const funnelOrigin = public_url ? tailscaleFunnelOrigin(public_url) : null;
+    if (public_url && !funnelOrigin) {
+      return NextResponse.json({ error: "Public relay must be a Tailscale Funnel HTTPS URL" }, { status: 400 });
+    }
+
     const supabase = createAdminClient();
     await ensureUserProfile(supabase, userId, email, name);
 
@@ -96,7 +101,7 @@ export async function POST(request: NextRequest) {
       magic_dns: magic_dns || null,
       node_name: node_name || "fotoro-server",
       status: status || "online",
-      public_url: public_url ? normalizeFotoroServerUrl(public_url) : null,
+      public_url: funnelOrigin,
       tailnet_url: tailnet_url ? normalizeFotoroServerUrl(tailnet_url) : null,
       last_seen: now,
       updated_at: now,

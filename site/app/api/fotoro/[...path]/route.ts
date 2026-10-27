@@ -12,7 +12,16 @@ async function proxyToRelay(
   userId: string,
   bearer: string
 ) {
-  const base = await getRelayBaseUrlForUser(userId);
+  let base: string;
+  try {
+    base = await getRelayBaseUrlForUser(userId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No server route configured";
+    return NextResponse.json(
+      { error: sanitizeRelayError(message) || "No server route configured" },
+      { status: 503 }
+    );
+  }
   const target = new URL(path, base.endsWith("/") ? base : `${base}/`);
   target.search = request.nextUrl.search;
 
@@ -140,7 +149,7 @@ async function handleProxy(
     }
     const path = segments.map((segment) => encodeURIComponent(segment)).join("/");
 
-    return proxyToRelay(request, path, userId, bearer);
+    return await proxyToRelay(request, path, userId, bearer);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Proxy error";
     return NextResponse.json(

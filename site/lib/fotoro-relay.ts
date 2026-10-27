@@ -62,7 +62,7 @@ export async function getRelayBaseUrlForUser(userId: string): Promise<string> {
   if (!base) {
     throw new Error(
       process.env.NODE_ENV === "production"
-        ? "No private server route configured — run the website beside Fotoro or set FOTORO_ALLOW_TAILNET_RELAY=1 on a tailnet host"
+        ? "No reachable server route configured — start Fotoro and check its Tailscale Funnel route"
         : "No server route configured — run ./fotoro server"
     );
   }
@@ -149,7 +149,7 @@ export async function diagnoseRelayConnectivity(
       code: "NO_RELAY_URL",
       stage: "relay_url",
       message:
-        "Server is registered, but this website cannot reach its private endpoint. Run the website on the Fotoro host or another tailnet host.",
+        "Server is registered, but this website has no reachable endpoint. Start Fotoro and check its Tailscale Funnel route.",
       ...baseInfo,
     };
   }

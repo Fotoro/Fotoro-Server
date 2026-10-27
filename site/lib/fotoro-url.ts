@@ -17,6 +17,25 @@ export function normalizeFotoroServerUrl(raw: string): string {
   return `${proto}${encodedHost}${rest}`;
 }
 
+/** Only a Tailscale Funnel HTTPS origin is eligible for a hosted website relay. */
+export function tailscaleFunnelOrigin(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw.trim());
+    if (
+      url.protocol !== "https:" ||
+      !url.hostname.toLowerCase().endsWith(".ts.net") ||
+      url.username || url.password || url.port ||
+      url.pathname !== "/" || url.search || url.hash
+    ) {
+      return null;
+    }
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
 export function getNodeBaseUrl(node: {
   public_url?: string | null;
   tailnet_url?: string | null;
@@ -33,8 +52,10 @@ export function getNodeBaseUrl(node: {
       (node.magic_dns ? `https://${node.magic_dns}` : "");
   }
 
-  if (!raw && process.env.FOTORO_ALLOW_PUBLIC_RELAY === "1") {
-    raw = node.public_url ?? "";
+  // Recording a Funnel URL on the linked node is the owner's opt-in. A hosted
+  // website cannot reach a private tailnet address, so use that verified URL.
+  if (!raw && process.env.FOTORO_DISABLE_PUBLIC_RELAY !== "1") {
+    return tailscaleFunnelOrigin(node.public_url);
   }
 
   if (!raw) return null;
