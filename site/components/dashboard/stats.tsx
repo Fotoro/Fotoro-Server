@@ -1,40 +1,40 @@
 "use client";
 
-import { Activity, Database, ImageIcon, Users } from "lucide-react";
+import { Activity, Database, ImageIcon, ShieldCheck } from "lucide-react";
 import { useServerData } from "@/components/dashboard/server-data-provider";
-import { formatBytes, formatCount, TBE } from "@/lib/fotoro-server-data";
+import { formatBytes, formatCount } from "@/lib/fotoro-server-data";
 
 export function DashboardStats() {
   const { stats, online } = useServerData();
   const live = online === "online" && stats;
+  const unavailable = online === "online" ? "Metrics unavailable" : "Server offline";
 
   const items = [
     {
       icon: ImageIcon,
       label: "Media items",
-      value: live ? formatCount(stats.photos_total) : TBE,
-      delta: live ? `${formatCount(stats.thumbnails_medium)} thumbnails` : TBE,
+      value: live ? formatCount(stats.photos_total) : "—",
+      delta: live ? `${formatCount(stats.thumbnails_medium)} medium previews` : unavailable,
     },
     {
       icon: Database,
-      label: "On disk",
-      value: live ? formatBytes(stats.storage_used_bytes) : TBE,
+      label: "Library footprint",
+      value: live ? formatBytes(stats.storage_used_bytes) : "—",
       delta: live && stats.disk_total_bytes
         ? `${formatBytes(stats.disk_free_bytes)} free`
-        : TBE,
+        : unavailable,
     },
     {
-      icon: Users,
-      label: "People",
-      value: live && stats.people_count != null ? formatCount(stats.people_count) : TBE,
-      delta: TBE,
+      icon: ShieldCheck,
+      label: "Recorded backup copies",
+      value: live ? formatCount(stats.backup_verified) : "—",
+      delta: live ? stats.backup_available ? `${formatCount(stats.backup_pending)} awaiting backup` : "Backup target unavailable" : unavailable,
     },
     {
       icon: Activity,
-      label: "AI queue",
-      value:
-        live && stats.ai_queue_pct != null ? `${stats.ai_queue_pct}%` : TBE,
-      delta: TBE,
+      label: "Processing queue",
+      value: live ? formatCount(stats.queue_pending) : "—",
+      delta: live ? `${formatCount(stats.queue_failed)} failed · ${formatCount(stats.search_vectors)} search vectors` : unavailable,
     },
   ];
 
@@ -43,16 +43,16 @@ export function DashboardStats() {
       {items.map((s) => (
         <div
           key={s.label}
-          className="rounded-xl border border-border bg-card p-4 ring-soft"
+          className="matrix-panel p-5"
         >
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <s.icon className="size-3.5 text-foreground" />
+          <div className="relative flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+            <s.icon className="size-3.5 text-[hsl(var(--brand))]" />
             {s.label}
           </div>
-          <p className="mt-3 font-mono text-2xl tracking-tight text-foreground">
+          <p className="relative mt-5 font-mono text-3xl tracking-tight text-foreground">
             {s.value}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">{s.delta}</p>
+          <p className="relative mt-2 text-xs text-muted-foreground">{s.delta}</p>
         </div>
       ))}
     </div>

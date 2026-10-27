@@ -20,7 +20,7 @@ export function ServerNodeCard({
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl border border-border bg-card p-6 ring-soft"
+        className="matrix-panel p-6"
       >
         <div className="flex items-center gap-2">
           <Server className="size-4 text-muted-foreground" />
@@ -39,7 +39,7 @@ export function ServerNodeCard({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="overflow-hidden rounded-xl border border-border bg-card ring-soft"
+      className="matrix-panel"
     >
       <div className="flex items-center justify-between border-b border-border px-5 py-4">
         <div className="flex items-center gap-2">
@@ -60,7 +60,7 @@ export function ServerNodeCard({
       <dl className="divide-y divide-border">
         <div className="flex items-center justify-between px-5 py-3 text-sm">
           <dt className="text-muted-foreground">Connection</dt>
-          <dd className="font-mono text-xs text-foreground">Fotoro secure relay</dd>
+          <dd className="font-mono text-xs text-foreground">Private server route</dd>
         </div>
         {connectError || node.connect_error ? (
           <div className="px-5 py-3 text-xs text-muted-foreground">

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <ServerDataProvider>
-      <div className="flex min-h-screen bg-background">
+      <div className="dashboard-grid flex min-h-screen">
         <DashboardSidebar />
         <div className="flex min-w-0 flex-1 flex-col">{children}</div>
       </div>

@@ -85,7 +85,7 @@ export default function LibraryPage() {
       >
         <div className="mb-4 flex shrink-0 flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            <p className="matrix-label">
               Media library
             </p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">Your media</h1>

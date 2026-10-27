@@ -1,8 +1,6 @@
 import type { GalleryPhoto } from "@/lib/fotoro-local";
 import { gridThumbPath, proxyMediaUrl } from "@/lib/fotoro-media-url";
 
-export const TBE = "TBE";
-
 export interface ServerLibraryStats {
   photos_total: number;
   photos_processed: number;
@@ -12,9 +10,17 @@ export interface ServerLibraryStats {
   disk_total_bytes: number;
   disk_free_bytes: number;
   devices_count: number;
-  people_count: number | null;
-  places_count: number | null;
-  ai_queue_pct: number | null;
+  photos_with_faces: number;
+  queue_pending: number;
+  queue_failed: number;
+  search_vectors: number;
+  backup_verified: number;
+  backup_pending: number;
+  backup_available: boolean;
+  primary_available: boolean;
+  configured_model: string;
+  collected_at: string;
+  stale: boolean;
 }
 
 export interface ServerDevice {
@@ -69,9 +75,17 @@ interface ApiStats {
   disk_total_bytes?: number;
   disk_free_bytes?: number;
   devices_count?: number;
-  people_count?: number | null;
-  places_count?: number | null;
-  ai_queue_pct?: number | null;
+  photos_with_faces?: number;
+  queue_pending?: number;
+  queue_failed?: number;
+  search_vectors?: number;
+  backup_verified?: number;
+  backup_pending?: number;
+  backup_available?: boolean;
+  primary_available?: boolean;
+  configured_model?: string;
+  collected_at?: string;
+  stale?: boolean;
 }
 
 function authHeaders(token: string): HeadersInit {
@@ -128,14 +142,22 @@ export async function fetchLibraryStats(token: string): Promise<ServerLibrarySta
       photos_total: data.total ?? 0,
       photos_processed: data.processed ?? 0,
       photos_failed: data.failed ?? 0,
-      thumbnails_medium: data.thumbnails_medium ?? data.total ?? 0,
+      thumbnails_medium: data.thumbnails_medium ?? 0,
       storage_used_bytes: data.storage_used_bytes ?? 0,
       disk_total_bytes: data.disk_total_bytes ?? 0,
       disk_free_bytes: data.disk_free_bytes ?? 0,
-      devices_count: data.devices_count ?? 1,
-      people_count: data.people_count ?? null,
-      places_count: data.places_count ?? null,
-      ai_queue_pct: data.ai_queue_pct ?? null,
+      devices_count: data.devices_count ?? 0,
+      photos_with_faces: data.photos_with_faces ?? 0,
+      queue_pending: data.queue_pending ?? 0,
+      queue_failed: data.queue_failed ?? 0,
+      search_vectors: data.search_vectors ?? 0,
+      backup_verified: data.backup_verified ?? 0,
+      backup_pending: data.backup_pending ?? 0,
+      backup_available: data.backup_available ?? false,
+      primary_available: data.primary_available ?? false,
+      configured_model: data.configured_model ?? "Not configured",
+      collected_at: data.collected_at ?? "",
+      stale: data.stale ?? false,
     };
   } catch {
     return null;
@@ -144,21 +166,8 @@ export async function fetchLibraryStats(token: string): Promise<ServerLibrarySta
 
 export async function fetchServerDevices(token: string): Promise<ServerDevice[]> {
   try {
-    const [stats, status] = await Promise.all([
-      proxyGet<ApiStats>("api/stats", token),
-      proxyGet<{ running?: boolean }>("api/server/status", token).catch(() => ({
-        running: true,
-      })),
-    ]);
-    return [
-      {
-        id: "local-server",
-        name: "fotoro-server",
-        platform: "server",
-        status: status.running ? "active" : "idle",
-        items: `${(stats.total ?? 0).toLocaleString()} photos`,
-      },
-    ];
+    const data = await proxyGet<{ devices?: ServerDevice[] }>("devices", token);
+    return Array.isArray(data.devices) ? data.devices : [];
   } catch {
     return [];
   }
@@ -198,7 +207,8 @@ export async function searchPhotosApi(
 }
 
 export function formatBytes(bytes: number): string {
-  if (!bytes || bytes <= 0) return TBE;
+  if (!Number.isFinite(bytes) || bytes < 0) return "—";
+  if (bytes === 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
   let v = bytes;
   let i = 0;
@@ -210,6 +220,6 @@ export function formatBytes(bytes: number): string {
 }
 
 export function formatCount(n: number | null | undefined): string {
-  if (n == null || n < 0) return TBE;
+  if (n == null || !Number.isFinite(n) || n < 0) return "—";
   return n.toLocaleString();
 }

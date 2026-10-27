@@ -38,8 +38,8 @@ export default function DevicesPage() {
       <motion.main className="container-tight w-full px-5 py-8">
         <div className="mb-6 flex items-end justify-between">
           <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Devices</p>
-            <h1 className="mt-1 text-2xl font-semibold">Connected devices</h1>
+            <p className="matrix-label">Devices / linked to this host</p>
+            <h1 className="mt-1 text-2xl font-semibold">Linked devices</h1>
           </div>
           <ConnectivityBadge state={online} onRefresh={refresh} />
         </div>

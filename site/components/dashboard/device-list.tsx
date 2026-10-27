@@ -1,10 +1,8 @@
 "use client";
 
-import { Cpu, Laptop, MoreHorizontal, Server, Smartphone, Tablet } from "lucide-react";
+import { Cpu, Laptop, Server, Smartphone, Tablet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useServerData } from "@/components/dashboard/server-data-provider";
-import { TBE } from "@/lib/fotoro-server-data";
 import { cn } from "@/lib/utils";
 
 const KIND_ICONS: Record<string, typeof Server> = {
@@ -26,22 +24,19 @@ export function DeviceList() {
   const { devices, online } = useServerData();
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card ring-soft">
+    <div className="matrix-panel">
       <div className="flex items-center justify-between border-b border-border px-5 py-4">
         <div className="flex items-center gap-2">
           <Cpu className="size-4 text-foreground" />
-          <h3 className="text-sm font-semibold tracking-tight">Connected devices</h3>
-          <Badge variant="outline">{devices.length || TBE}</Badge>
+          <h3 className="text-sm font-semibold tracking-tight">Linked devices</h3>
+          <Badge variant="outline">{online === "online" ? devices.length : "—"}</Badge>
         </div>
-        <Button size="sm" variant="ghost" disabled>
-          Pair new device
-        </Button>
       </div>
       {online !== "online" ? (
-        <p className="px-5 py-8 text-center text-sm text-muted-foreground">{TBE}</p>
+        <p className="px-5 py-8 text-center text-sm text-muted-foreground">Connect your server to see paired devices.</p>
       ) : devices.length === 0 ? (
         <p className="px-5 py-8 text-center text-sm text-muted-foreground">
-          No devices paired yet.
+          Device list unavailable. Refresh the connection to try again.
         </p>
       ) : (
         <ul className="divide-y divide-border">
@@ -82,9 +77,6 @@ export function DeviceList() {
                       : "This machine"}
                   </p>
                 </div>
-                <Button size="icon" variant="ghost" disabled aria-hidden>
-                  <MoreHorizontal className="size-4" />
-                </Button>
               </li>
             );
           })}

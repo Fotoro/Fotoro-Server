@@ -122,14 +122,14 @@ export default function DashboardPage() {
       >
         <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                <p className="matrix-label">
               Overview
             </p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-              Welcome back{user.name ? `, ${user.name.split(" ")[0]}` : ""}.
+              Your archive{user.name ? `, ${user.name.split(" ")[0]}` : ""}.
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Your photos live on your hardware — this dashboard is just the remote control.
+              Live measurements from your server, stored locally and refreshed as it runs.
             </p>
           </div>
           <ConnectivityBadge state={online} onRefresh={refresh} />
@@ -143,7 +143,7 @@ export default function DashboardPage() {
             {serverOnline && node ? (
               <UploadZone />
             ) : (
-              <div className="rounded-xl border border-dashed border-border bg-card/40 p-8 text-center ring-soft">
+              <div className="matrix-panel border-dashed p-8 text-center">
                 <Upload className="mx-auto mb-3 size-8 text-muted-foreground" />
                 <p className="text-sm font-medium text-foreground">
                   Connect your server to upload

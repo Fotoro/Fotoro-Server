@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import { clearAuth, clearProxyCookie, getStoredUser, type FotoroUser } from "@/lib/fotoro-session";
 import { useServerData } from "@/components/dashboard/server-data-provider";
-import { formatBytes, formatCount, TBE } from "@/lib/fotoro-server-data";
+import { formatBytes, formatCount } from "@/lib/fotoro-server-data";
 
 type BackupStatus = {
   configured: boolean;
@@ -25,7 +25,7 @@ export default function StoragePage() {
   const { stats, online, token } = useServerData();
   const [backup, setBackup] = React.useState<BackupStatus | null>(null);
   const [syncing, setSyncing] = React.useState(false);
-  const live = online === "online" && stats;
+  const live = online === "online" ? stats : null;
 
   const refreshBackup = React.useCallback(async () => {
     if (!token || online !== "online") return;
@@ -61,12 +61,12 @@ export default function StoragePage() {
   if (!user) return null;
 
   const rows = [
-    { label: "Photos indexed", value: live ? formatCount(stats.photos_total) : TBE },
-    { label: "Medium thumbnails", value: live ? formatCount(stats.thumbnails_medium) : TBE },
-    { label: "Cache and staging", value: live ? formatBytes(stats.storage_used_bytes) : TBE },
-    { label: "Disk total", value: live && stats.disk_total_bytes ? formatBytes(stats.disk_total_bytes) : TBE },
-    { label: "Disk free", value: live && stats.disk_free_bytes ? formatBytes(stats.disk_free_bytes) : TBE },
-    { label: "Failed imports", value: live ? formatCount(stats.photos_failed) : TBE },
+    { label: "Media items", value: live ? formatCount(live.photos_total) : "—" },
+    { label: "Medium thumbnails", value: live ? formatCount(live.thumbnails_medium) : "—" },
+    { label: "Indexed originals, cache and staging", value: live ? formatBytes(live.storage_used_bytes) : "—" },
+    { label: "Primary disk capacity", value: live && live.disk_total_bytes ? formatBytes(live.disk_total_bytes) : "—" },
+    { label: "Primary disk free", value: live && live.disk_total_bytes ? formatBytes(live.disk_free_bytes) : "—" },
+    { label: "Items needing attention", value: live ? formatCount(live.photos_failed) : "—" },
   ];
 
   return (
@@ -80,9 +80,10 @@ export default function StoragePage() {
         }}
       />
       <main className="container-tight w-full px-5 py-8">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">Storage</p>
+        <p className="matrix-label">Storage / local disks</p>
         <h1 className="mt-1 text-2xl font-semibold">Disk usage</h1>
-        <dl className="mt-8 divide-y divide-border rounded-xl border border-border bg-card ring-soft">
+        {live?.collected_at ? <p className="mt-2 font-mono text-xs text-muted-foreground">Measured on your server {new Date(live.collected_at).toLocaleString()}{live.stale ? " · last available reading" : ""}</p> : null}
+        <dl className="matrix-panel mt-8 divide-y divide-border">
           {rows.map((r) => (
             <div key={r.label} className="flex justify-between px-5 py-4 text-sm">
               <dt className="text-muted-foreground">{r.label}</dt>
@@ -90,7 +91,7 @@ export default function StoragePage() {
             </div>
           ))}
         </dl>
-        <div className="mt-8 rounded-xl border border-border bg-card p-5 ring-soft">
+        <div className="matrix-panel mt-8 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-medium">Automatic backup</h2>
             <button type="button" onClick={() => void syncBackup()} disabled={!backup?.available || syncing}
