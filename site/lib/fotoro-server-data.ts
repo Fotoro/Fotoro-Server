@@ -108,10 +108,11 @@ function authHeaders(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}` };
 }
 
-async function proxyGet<T>(path: string, token: string): Promise<T> {
-  const res = await fetch(`/api/fotoro/${path.replace(/^\//, "")}`, {
+async function proxyGet<T>(path: string, token: string, baseUrl: string | null = null): Promise<T> {
+  const cleanPath = path.replace(/^\//, "");
+  const res = await fetch(baseUrl ? `${baseUrl}/${cleanPath}` : `/api/fotoro/${cleanPath}`, {
     headers: authHeaders(token),
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(8_000),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -169,9 +170,9 @@ function mapApiMedia(row: ApiMediaRow): GalleryPhoto {
   };
 }
 
-export async function fetchLibraryStats(token: string): Promise<ServerLibraryStats | null> {
+export async function fetchLibraryStats(token: string, baseUrl: string | null = null): Promise<ServerLibraryStats | null> {
   try {
-    const data = await proxyGet<ApiStats>("api/stats", token);
+    const data = await proxyGet<ApiStats>("api/stats", token, baseUrl);
     return {
       photos_total: data.total ?? 0,
       photos_processed: data.processed ?? 0,
@@ -201,9 +202,9 @@ export async function fetchLibraryStats(token: string): Promise<ServerLibrarySta
   }
 }
 
-export async function fetchServerDevices(token: string): Promise<ServerDevice[]> {
+export async function fetchServerDevices(token: string, baseUrl: string | null = null): Promise<ServerDevice[]> {
   try {
-    const data = await proxyGet<{ devices?: ServerDevice[] }>("devices", token);
+    const data = await proxyGet<{ devices?: ServerDevice[] }>("devices", token, baseUrl);
     return Array.isArray(data.devices) ? data.devices : [];
   } catch {
     return [];
@@ -215,10 +216,11 @@ export async function fetchPhotosPage(
   token: string,
   page = 1,
   limit = 100,
-  knownTotal?: number
+  knownTotal?: number,
+  baseUrl: string | null = null
 ): Promise<PhotosPage> {
   void knownTotal;
-  const data = await proxyGet<ApiMediaPage>(`api/v1/media?page=${page}&limit=${limit}`, token);
+  const data = await proxyGet<ApiMediaPage>(`api/v1/media?page=${page}&limit=${limit}`, token, baseUrl);
   const list = Array.isArray(data.media) ? data.media : [];
 
   return {
@@ -233,11 +235,13 @@ export async function fetchPhotosPage(
 /** Semantic search — mirrors desktop GET /api/search?q= */
 export async function searchPhotosApi(
   token: string,
-  query: string
+  query: string,
+  baseUrl: string | null = null
 ): Promise<GalleryPhoto[]> {
   const data = await proxyGet<{ results?: ApiImageRow[] }>(
     `api/search?q=${encodeURIComponent(query)}`,
-    token
+    token,
+    baseUrl
   );
   const rows = data.results ?? [];
   return rows.map(mapApiImage);

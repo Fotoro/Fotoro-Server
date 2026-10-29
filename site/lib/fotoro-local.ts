@@ -40,6 +40,8 @@ export interface NodePublic {
   live?: boolean;
   connect_error?: string | null;
   last_seen?: string;
+  direct_url?: string | null;
+  private_url?: string | null;
 }
 
 export { normalizeFotoroServerUrl } from "@/lib/fotoro-url";
@@ -48,15 +50,15 @@ function authHeaders(supabaseToken: string): HeadersInit {
   return { Authorization: `Bearer ${supabaseToken}` };
 }
 
-/** Server-side relay probe — no funnel URL in browser. */
+/** Probe the owner's server from the browser, bypassing cloud relay timeouts. */
 export async function checkServerStatus(
-  _baseUrl: string | null,
+  baseUrl: string | null,
   supabaseToken: string
 ): Promise<{ state: ConnectivityState; error?: string; code?: string; stage?: string }> {
   try {
-    const res = await fetch("/api/connectivity", {
+    const res = await fetch(baseUrl ? `${baseUrl}/api/v1/me` : "/api/connectivity", {
       headers: authHeaders(supabaseToken),
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(7_000),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -67,7 +69,7 @@ export async function checkServerStatus(
         stage: (data as { stage?: string }).stage,
       };
     }
-    if ((data as { online?: boolean }).online) {
+    if (baseUrl || (data as { online?: boolean }).online) {
       return { state: "online" };
     }
     return {
@@ -85,22 +87,22 @@ export async function checkServerStatus(
 }
 
 export async function fetchPhotos(
-  _baseUrl: string | null,
+  baseUrl: string | null,
   supabaseToken: string,
   page = 1,
   limit = 100
 ): Promise<GalleryPhoto[]> {
-  const data = await fetchPhotosPage(supabaseToken, page, limit);
+  const data = await fetchPhotosPage(supabaseToken, page, limit, undefined, baseUrl);
   return data.photos;
 }
 
 export async function searchPhotos(
-  _baseUrl: string | null,
+  baseUrl: string | null,
   supabaseToken: string,
   query: string,
   _limit = 50
 ): Promise<GalleryPhoto[]> {
-  return searchPhotosApi(supabaseToken, query);
+  return searchPhotosApi(supabaseToken, query, baseUrl);
 }
 
 export function thumbUrl(_baseUrl: string | null, photo: GalleryPhoto): string {

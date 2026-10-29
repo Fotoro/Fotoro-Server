@@ -18,7 +18,7 @@ type Diagnostics = {
 export default function SettingsPage() {
   const router = useRouter();
   const [user, setUser] = React.useState<FotoroUser | null>(null);
-  const { token, online } = useServerData();
+  const { token, endpoint, online } = useServerData();
   const [schedule, setSchedule] = React.useState<Schedule | null>(null);
   const [diagnostics, setDiagnostics] = React.useState<Diagnostics | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -34,8 +34,8 @@ export default function SettingsPage() {
     const headers = { Authorization: `Bearer ${token}` };
     try {
       const [scheduleResponse, diagnosticsResponse] = await Promise.all([
-        fetch("/api/fotoro/api/scheduler/config", { headers }),
-        fetch("/api/fotoro/api/v1/diagnostics", { headers }),
+        fetch(endpoint ? `${endpoint}/api/scheduler/config` : "/api/fotoro/api/scheduler/config", { headers }),
+        fetch(endpoint ? `${endpoint}/api/v1/diagnostics` : "/api/fotoro/api/v1/diagnostics", { headers }),
       ]);
       if (!scheduleResponse.ok || !diagnosticsResponse.ok) throw new Error("Could not read server settings");
       setSchedule((await scheduleResponse.json()) as Schedule);
@@ -44,7 +44,7 @@ export default function SettingsPage() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not read server settings");
     }
-  }, [token, online]);
+  }, [token, endpoint, online]);
 
   React.useEffect(() => { void refresh(); }, [refresh]);
   React.useEffect(() => {
@@ -55,7 +55,7 @@ export default function SettingsPage() {
     if (!token || !schedule) return;
     setSaving(true);
     try {
-      const response = await fetch("/api/fotoro/api/scheduler/config", {
+      const response = await fetch(endpoint ? `${endpoint}/api/scheduler/config` : "/api/fotoro/api/scheduler/config", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: !schedule.enabled }),

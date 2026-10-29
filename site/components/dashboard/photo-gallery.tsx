@@ -116,7 +116,8 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
   _props,
   ref
 ) {
-  const { token, connectError } = useServerData();
+  const { token, node, endpoint, connectError } = useServerData();
+  const nodeReady = Boolean(node);
   const [photos, setPhotos] = React.useState<GalleryPhoto[]>([]);
   const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
@@ -168,13 +169,13 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
   const prefetchPage = React.useCallback(
     (p: number) => {
       if (!token || prefetchRef.current.has(p)) return;
-      void fetchPhotosPage(token, p, PAGE_SIZE, totalRef.current)
+      void fetchPhotosPage(token, p, PAGE_SIZE, totalRef.current, endpoint)
         .then((data) => {
           if (data.photos.length > 0) prefetchRef.current.set(p, data.photos);
         })
         .catch(() => {});
     },
-    [token]
+    [token, endpoint]
   );
 
   const loadPage = React.useCallback(
@@ -200,7 +201,8 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
               token,
               p,
               PAGE_SIZE,
-              append ? totalRef.current : undefined
+              append ? totalRef.current : undefined,
+              endpoint
             );
 
         totalRef.current = data.total;
@@ -228,7 +230,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
         fetchingRef.current = false;
       }
     },
-    [token, prefetchPage]
+    [token, endpoint, prefetchPage]
   );
 
   const loadMore = React.useCallback(() => {
@@ -255,12 +257,12 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
   }, [selectedIndex, photos.length, hasMore, loadMore]);
 
   React.useEffect(() => {
-    if (!token) return;
+    if (!token || !nodeReady) return;
     pageRef.current = 1;
     totalRef.current = 0;
     prefetchRef.current.clear();
     void loadPage(1, false);
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token, nodeReady, endpoint]); // eslint-disable-line react-hooks/exhaustive-deps
 
   React.useImperativeHandle(
     ref,
@@ -303,7 +305,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
     setSearching(true);
     setError(null);
     try {
-      const results = await searchPhotos(null, token, query.trim());
+      const results = await searchPhotos(endpoint, token, query.trim());
       setPhotos(results);
       setTotal(results.length);
       totalRef.current = results.length;

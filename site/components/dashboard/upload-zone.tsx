@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Check, ImageIcon, Loader2, Upload, X } from "lucide-react";
 import { getValidAccessToken } from "@/lib/fotoro-session";
+import { useServerData } from "@/components/dashboard/server-data-provider";
 import {
   fetchOffloadAsset,
   uploadResumable,
@@ -22,6 +23,7 @@ type UploadEntry = {
 };
 
 export function UploadZone({ onUploaded }: { onUploaded?: () => void }) {
+  const { endpoint } = useServerData();
   const [entries, setEntries] = React.useState<UploadEntry[]>([]);
   const [dragging, setDragging] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
@@ -42,8 +44,8 @@ export function UploadZone({ onUploaded }: { onUploaded?: () => void }) {
         const id = ++nextId.current;
         setEntries((current) => [{ id, file, progress: 0 }, ...current]);
         try {
-          const receipt = await uploadResumable(file, getValidAccessToken, (progress) =>
-            updateEntry(id, { progress })
+          const receipt = await uploadResumable(
+            file, getValidAccessToken, (progress) => updateEntry(id, { progress }), endpoint
           );
           updateEntry(id, { progress: 100, asset: receipt.asset, duplicate: receipt.duplicate });
           onUploaded?.();
@@ -65,7 +67,7 @@ export function UploadZone({ onUploaded }: { onUploaded?: () => void }) {
     if (!entry.asset) return;
     updateEntry(entry.id, { checking: true, error: undefined });
     try {
-      const asset = await fetchOffloadAsset(entry.asset.id, getValidAccessToken);
+      const asset = await fetchOffloadAsset(entry.asset.id, getValidAccessToken, endpoint);
       updateEntry(entry.id, { asset, checking: false });
       onUploaded?.();
     } catch (error) {
@@ -77,7 +79,7 @@ export function UploadZone({ onUploaded }: { onUploaded?: () => void }) {
     if (!entry.asset) return;
     updateEntry(entry.id, { checking: true, error: undefined });
     try {
-      const result = await verifyDownloadedOriginal(entry.file, entry.asset, getValidAccessToken);
+      const result = await verifyDownloadedOriginal(entry.file, entry.asset, getValidAccessToken, endpoint);
       updateEntry(entry.id, { checking: false, verification: result });
     } catch (error) {
       updateEntry(entry.id, { checking: false, error: error instanceof Error ? error.message : "Read-back check failed" });

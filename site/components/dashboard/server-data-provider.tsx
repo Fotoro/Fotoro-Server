@@ -9,9 +9,12 @@ import {
   type ServerLibraryStats,
 } from "@/lib/fotoro-server-data";
 import { checkServerStatus, type ConnectivityState } from "@/lib/fotoro-local";
+import type { NodePublic } from "@/lib/fotoro-local";
 
 interface ServerDataContextValue {
   token: string | null;
+  node: NodePublic | null;
+  endpoint: string | null;
   online: ConnectivityState;
   connectError: string | null;
   stats: ServerLibraryStats | null;
@@ -22,6 +25,8 @@ interface ServerDataContextValue {
 
 const ServerDataContext = React.createContext<ServerDataContextValue>({
   token: null,
+  node: null,
+  endpoint: null,
   online: "offline",
   connectError: null,
   stats: null,
@@ -32,6 +37,8 @@ const ServerDataContext = React.createContext<ServerDataContextValue>({
 
 export function ServerDataProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = React.useState<string | null>(null);
+  const [node, setNode] = React.useState<NodePublic | null>(null);
+  const [endpoint, setEndpoint] = React.useState<string | null>(null);
   const [online, setOnline] = React.useState<ConnectivityState>("checking");
   const [connectError, setConnectError] = React.useState<string | null>(null);
   const [stats, setStats] = React.useState<ServerLibraryStats | null>(null);
@@ -46,6 +53,7 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
     const run = async () => {
       const t = await getValidAccessToken();
       setToken(t);
+      setLoading(false);
       if (!t) {
         stateRef.current = "offline";
         setOnline("offline");
@@ -56,9 +64,32 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
         return;
       }
 
-      await syncProxyCookie(t);
-
-      const conn = await checkServerStatus(null, t);
+      void syncProxyCookie(t).catch(() => {});
+      let nextNode: NodePublic | null = null;
+      try {
+        const response = await fetch("/api/nodes", {
+          headers: { Authorization: `Bearer ${t}` },
+          signal: AbortSignal.timeout(8_000),
+        });
+        if (!response.ok) throw new Error(`Device lookup failed (${response.status})`);
+        const body = await response.json();
+        nextNode = body.node ?? null;
+      } catch (error) {
+        setConnectError(error instanceof Error ? error.message : "Device lookup failed");
+        stateRef.current = "offline";
+        setOnline("offline");
+        return;
+      }
+      setNode(nextNode);
+      const baseUrl = nextNode?.direct_url ?? null;
+      setEndpoint(baseUrl);
+      if (!nextNode) {
+        stateRef.current = "offline";
+        setOnline("offline");
+        setConnectError("No server linked to this account.");
+        return;
+      }
+      const conn = await checkServerStatus(baseUrl, t);
       if (conn.state !== "online") {
         failedProbes.current++;
         // A wake-up or one lost relay response should not make an open library
@@ -81,8 +112,8 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
       setOnline("online");
       setConnectError(null);
       const [nextStats, nextDevices] = await Promise.allSettled([
-        fetchLibraryStats(t),
-        fetchServerDevices(t),
+        fetchLibraryStats(t, baseUrl),
+        fetchServerDevices(t, baseUrl),
       ]);
       if (nextStats.status === "fulfilled") setStats(nextStats.value);
       if (nextDevices.status === "fulfilled") setDevices(nextDevices.value);
@@ -113,7 +144,7 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <ServerDataContext.Provider
-      value={{ token, online, connectError, stats, devices, loading, refresh }}
+      value={{ token, node, endpoint, online, connectError, stats, devices, loading, refresh }}
     >
       {children}
     </ServerDataContext.Provider>

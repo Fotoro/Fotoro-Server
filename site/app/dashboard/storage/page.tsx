@@ -22,18 +22,18 @@ type BackupStatus = {
 export default function StoragePage() {
   const router = useRouter();
   const [user, setUser] = React.useState<FotoroUser | null>(null);
-  const { stats, online, token } = useServerData();
+  const { stats, online, token, endpoint } = useServerData();
   const [backup, setBackup] = React.useState<BackupStatus | null>(null);
   const [syncing, setSyncing] = React.useState(false);
   const live = online === "online" ? stats : null;
 
   const refreshBackup = React.useCallback(async () => {
     if (!token || online !== "online") return;
-    const res = await fetch("/api/fotoro/api/v1/storage", {
+    const res = await fetch(endpoint ? `${endpoint}/api/v1/storage` : "/api/fotoro/api/v1/storage", {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) setBackup((await res.json()) as BackupStatus);
-  }, [token, online]);
+  }, [token, endpoint, online]);
 
   React.useEffect(() => {
     void refreshBackup();
@@ -43,7 +43,7 @@ export default function StoragePage() {
     if (!token) return;
     setSyncing(true);
     try {
-      await fetch("/api/fotoro/api/v1/storage/sync", {
+      await fetch(endpoint ? `${endpoint}/api/v1/storage/sync` : "/api/fotoro/api/v1/storage/sync", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });

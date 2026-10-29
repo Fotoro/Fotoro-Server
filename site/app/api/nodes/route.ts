@@ -2,21 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifySupabaseToken } from "@/lib/auth-verify";
 import { normalizeFotoroServerUrl, tailscaleFunnelOrigin } from "@/lib/fotoro-url";
-import { relayFetch, sanitizeRelayError } from "@/lib/fotoro-relay";
 
-/** Browser-safe node record — no funnel URL, tailscale IP, or magic DNS. */
+/** Only an authenticated owner can read the registered Funnel origin. */
 function sanitizeNodeForClient(
-  node: Record<string, unknown> | null,
-  live?: boolean,
-  connectError?: string | null
+  node: Record<string, unknown> | null
 ) {
   if (!node) return null;
   return {
     node_name: node.node_name ?? "fotoro-server",
     status: node.status ?? "unknown",
     last_seen: node.last_seen ?? null,
-    live: live ?? false,
-    connect_error: connectError ? sanitizeRelayError(connectError) : null,
+    direct_url: tailscaleFunnelOrigin(node.public_url as string | null),
+    private_url: tailscaleFunnelOrigin(node.tailnet_url as string | null),
   };
 }
 
@@ -167,27 +164,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    let live = false;
-    let connectError: string | null = null;
-
-    if (data) {
-      try {
-        const probeRes = await relayFetch(userId, token, "api/stats");
-        const probeData = await probeRes.json().catch(() => ({}));
-        live = probeRes.ok && typeof (probeData as { total?: number }).total === "number";
-        if (!live) {
-          connectError =
-            (probeData as { error?: string }).error ??
-            `Relay returned HTTP ${probeRes.status}`;
-        }
-      } catch (err) {
-        live = false;
-        connectError = err instanceof Error ? err.message : "Relay probe failed";
-      }
-    }
-
     return NextResponse.json({
-      node: sanitizeNodeForClient(data, live, connectError),
+      node: sanitizeNodeForClient(data),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal error";

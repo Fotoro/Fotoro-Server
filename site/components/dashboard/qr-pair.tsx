@@ -8,7 +8,7 @@ import { useServerData } from "@/components/dashboard/server-data-provider";
 type PairingSession = { qr_payload: string; expires_at: string };
 
 export function QrPair() {
-  const { token, online } = useServerData();
+  const { token, endpoint, node } = useServerData();
   const [session, setSession] = React.useState<PairingSession | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -25,9 +25,11 @@ export function QrPair() {
     setError(null);
     setSession(null);
     try {
-      const res = await fetch("/api/pairing", {
+      const res = await fetch(endpoint ? `${endpoint}/api/v1/pairing/sessions` : "/api/pairing", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ server_url: node?.private_url ?? endpoint }),
+        signal: AbortSignal.timeout(8_000),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Pairing unavailable");
@@ -60,7 +62,7 @@ export function QrPair() {
           </>
         ) : <p>{session ? "Pairing key expired." : "No active pairing key."}</p>}
         {error ? <p className="text-destructive-foreground">{error}</p> : null}
-        <button type="button" onClick={() => void createPairing()} disabled={loading || online !== "online"}
+        <button type="button" onClick={() => void createPairing()} disabled={loading || !token || !node}
           className="rounded-md border border-border px-3 py-1.5 text-xs disabled:opacity-50">
           {loading ? "Creating…" : active ? "Create another key" : "Create pairing key"}
         </button>

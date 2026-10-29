@@ -22,12 +22,10 @@ import {
   type FotoroUser,
 } from "@/lib/fotoro-session";
 import { handoffExistingSessionForCli } from "@/lib/cli-handoff-session";
-import type { NodePublic } from "@/lib/fotoro-local";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = React.useState<FotoroUser | null>(null);
-  const [node, setNode] = React.useState<NodePublic | null>(null);
   const [token, setToken] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [cliComplete, setCliComplete] = React.useState(false);
@@ -50,27 +48,13 @@ export default function DashboardPage() {
       }
       setUser(stored);
       setToken(supabaseToken);
-      fetchNode(supabaseToken);
+      setLoading(false);
     }
 
     void init();
   }, [router]);
 
-  async function fetchNode(supabaseToken: string) {
-    try {
-      const res = await fetch("/api/nodes", {
-        headers: { Authorization: `Bearer ${supabaseToken}` },
-      });
-      const data = await res.json();
-      setNode(data.node ?? null);
-    } catch {
-      setNode(null);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const { online, connectError, refresh } = useServerData();
+  const { node, online, connectError, refresh } = useServerData();
 
   function handleLogout() {
     clearAuth();

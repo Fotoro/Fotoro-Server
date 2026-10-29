@@ -50,12 +50,12 @@ async function expectedHash(file: File): Promise<string | undefined> {
   return digest(await file.arrayBuffer());
 }
 
-async function authenticatedFetch(path: string, getToken: TokenProvider, init: RequestInit = {}): Promise<Response> {
+async function authenticatedFetch(path: string, getToken: TokenProvider, baseUrl: string | null, init: RequestInit = {}): Promise<Response> {
   const token = await getToken();
   if (!token) throw new Error("Sign-in expired. Sign in again, then select the same file to resume.");
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${token}`);
-  return fetch(`/api/fotoro${path}`, { ...init, headers, cache: "no-store" });
+  return fetch(baseUrl ? `${baseUrl}${path}` : `/api/fotoro${path}`, { ...init, headers, cache: "no-store" });
 }
 
 async function responseError(response: Response, fallback: string): Promise<Error> {
@@ -73,7 +73,8 @@ function validAsset(asset: OffloadAsset, file: File): boolean {
 export async function uploadResumable(
   file: File,
   getToken: TokenProvider,
-  onProgress: (percent: number) => void
+  onProgress: (percent: number) => void,
+  baseUrl: string | null = null
 ): Promise<OffloadReceipt> {
   if (file.size === 0) throw new Error("Choose a nonempty photo or video.");
   const key = await storageKey(file);
@@ -81,7 +82,7 @@ export async function uploadResumable(
   let offset = 0;
 
   if (id) {
-    const head = await authenticatedFetch(`/api/v1/uploads/${encodeURIComponent(id)}`, getToken, { method: "HEAD" });
+    const head = await authenticatedFetch(`/api/v1/uploads/${encodeURIComponent(id)}`, getToken, baseUrl, { method: "HEAD" });
     if (head.ok && Number(head.headers.get("upload-length")) === file.size) {
       offset = Number(head.headers.get("upload-offset") ?? 0);
       if (!Number.isSafeInteger(offset) || offset < 0 || offset > file.size) {
@@ -96,7 +97,7 @@ export async function uploadResumable(
   }
 
   if (!id) {
-    const res = await authenticatedFetch("/api/v1/uploads", getToken, {
+    const res = await authenticatedFetch("/api/v1/uploads", getToken, baseUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -119,7 +120,7 @@ export async function uploadResumable(
   onProgress(Math.floor((offset / file.size) * 100));
   while (offset < file.size) {
     const chunk = file.slice(offset, Math.min(offset + CHUNK_BYTES, file.size));
-    const res = await authenticatedFetch(`/api/v1/uploads/${encodeURIComponent(id)}`, getToken, {
+    const res = await authenticatedFetch(`/api/v1/uploads/${encodeURIComponent(id)}`, getToken, baseUrl, {
       method: "PATCH",
       headers: { "Content-Type": "application/octet-stream", "Upload-Offset": String(offset) },
       body: chunk,
@@ -141,7 +142,7 @@ export async function uploadResumable(
     onProgress(Math.floor((offset / file.size) * 100));
   }
 
-  const done = await authenticatedFetch(`/api/v1/uploads/${encodeURIComponent(id)}/complete`, getToken, { method: "POST" });
+  const done = await authenticatedFetch(`/api/v1/uploads/${encodeURIComponent(id)}/complete`, getToken, baseUrl, { method: "POST" });
   if (!done.ok) throw await responseError(done, "Server rejected completed upload");
   const receipt = (await done.json()) as OffloadReceipt;
   if (!validAsset(receipt.asset, file)) throw new Error("Server returned an invalid media receipt");
@@ -150,8 +151,8 @@ export async function uploadResumable(
   return receipt;
 }
 
-export async function fetchOffloadAsset(id: string, getToken: TokenProvider): Promise<OffloadAsset> {
-  const res = await authenticatedFetch(`/api/v1/media/${encodeURIComponent(id)}`, getToken);
+export async function fetchOffloadAsset(id: string, getToken: TokenProvider, baseUrl: string | null = null): Promise<OffloadAsset> {
+  const res = await authenticatedFetch(`/api/v1/media/${encodeURIComponent(id)}`, getToken, baseUrl);
   if (!res.ok) throw await responseError(res, "Cannot check saved media");
   return (await res.json()) as OffloadAsset;
 }
@@ -160,12 +161,13 @@ export async function fetchOffloadAsset(id: string, getToken: TokenProvider): Pr
 export async function verifyDownloadedOriginal(
   file: File,
   asset: OffloadAsset,
-  getToken: TokenProvider
+  getToken: TokenProvider,
+  baseUrl: string | null = null
 ): Promise<"full" | "ranges"> {
   if (!validAsset(asset, file)) throw new Error("Saved media details do not match the selected file.");
   const path = `/api/v1/media/${encodeURIComponent(asset.id)}/content`;
   if (file.size <= FULL_DOWNLOAD_CHECK_BYTES && crypto.subtle) {
-    const res = await authenticatedFetch(path, getToken);
+    const res = await authenticatedFetch(path, getToken, baseUrl);
     if (!res.ok) throw await responseError(res, "Cannot download saved original");
     const downloaded = await res.arrayBuffer();
     if (downloaded.byteLength !== file.size || await digest(downloaded) !== asset.sha256 ||
@@ -177,7 +179,7 @@ export async function verifyDownloadedOriginal(
 
   for (const start of [0, Math.max(0, file.size - RANGE_CHECK_BYTES)]) {
     const end = Math.min(file.size - 1, start + RANGE_CHECK_BYTES - 1);
-    const res = await authenticatedFetch(path, getToken, {
+    const res = await authenticatedFetch(path, getToken, baseUrl, {
       headers: { Range: `bytes=${start}-${end}` },
     });
     if (res.status !== 206) {
