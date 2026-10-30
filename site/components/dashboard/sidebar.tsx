@@ -31,7 +31,7 @@ const NAV = [
 export function DashboardSidebar() {
   const pathname = usePathname();
   const { stats, devices, online } = useServerData();
-  const live = online === "online" && stats;
+  const live = (online === "online" || online === "reconnecting") && stats;
 
   const usedLabel = live ? formatBytes(stats.media_bytes) : "—";
   const totalLabel =
@@ -105,7 +105,7 @@ export function DashboardSidebar() {
         <p className="mt-2 text-[10px] text-muted-foreground">
           {live
             ? `${formatCount(stats.photos_total)} items · ${pct}% of disk used by Fotoro media`
-            : online === "online" ? "Metrics unavailable" : "Connect your server for live figures"}
+            : online === "online" ? "Metrics unavailable" : online === "reconnecting" ? "Reconnecting for updated figures" : "Connect your server for live figures"}
         </p>
       </div>
     </aside>

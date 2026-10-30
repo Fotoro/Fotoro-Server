@@ -203,12 +203,8 @@ export async function fetchLibraryStats(token: string, baseUrl: string | null = 
 }
 
 export async function fetchServerDevices(token: string, baseUrl: string | null = null): Promise<ServerDevice[]> {
-  try {
-    const data = await proxyGet<{ devices?: ServerDevice[] }>("devices", token, baseUrl);
-    return Array.isArray(data.devices) ? data.devices : [];
-  } catch {
-    return [];
-  }
+  const data = await proxyGet<{ devices?: ServerDevice[] }>("devices", token, baseUrl);
+  return Array.isArray(data.devices) ? data.devices : [];
 }
 
 /** Paginated gallery from the canonical media catalogue. */

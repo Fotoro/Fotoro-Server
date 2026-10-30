@@ -25,7 +25,8 @@ export function QrPair() {
     setError(null);
     setSession(null);
     try {
-      const res = await fetch(endpoint ? `${endpoint}/api/v1/pairing/sessions` : "/api/pairing", {
+      if (!endpoint) throw new Error("No public Tailscale Funnel URL is registered. Run ./fotoro nodesync.");
+      const res = await fetch(`${endpoint}/api/v1/pairing/sessions`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ server_url: node?.private_url ?? endpoint }),
@@ -62,7 +63,7 @@ export function QrPair() {
           </>
         ) : <p>{session ? "Pairing key expired." : "No active pairing key."}</p>}
         {error ? <p className="text-destructive-foreground">{error}</p> : null}
-        <button type="button" onClick={() => void createPairing()} disabled={loading || !token || !node}
+        <button type="button" onClick={() => void createPairing()} disabled={loading || !token || !node || !endpoint}
           className="rounded-md border border-border px-3 py-1.5 text-xs disabled:opacity-50">
           {loading ? "Creating…" : active ? "Create another key" : "Create pairing key"}
         </button>

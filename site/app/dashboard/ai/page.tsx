@@ -19,7 +19,7 @@ export default function AiModelsPage() {
 
   if (!user) return null;
 
-  const live = online === "online" ? stats : null;
+  const live = online === "online" || online === "reconnecting" ? stats : null;
 
   return (
     <>

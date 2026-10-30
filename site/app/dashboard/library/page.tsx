@@ -81,7 +81,7 @@ export default function LibraryPage() {
 
         <div className="grid min-h-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <PhotoGallery ref={galleryRef} />
-          {online === "online" && node ? (
+          {(online === "online" || online === "reconnecting") && node ? (
             <UploadZone
               onUploaded={() => {
                 void refresh();

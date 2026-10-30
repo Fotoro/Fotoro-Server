@@ -9,7 +9,7 @@ import {
 } from "@/lib/fotoro-server-data";
 import { fullImagePath, proxyMediaUrl } from "@/lib/fotoro-media-url";
 
-export type ConnectivityState = "checking" | "online" | "offline" | "syncing";
+export type ConnectivityState = "checking" | "online" | "reconnecting" | "offline" | "syncing";
 
 export interface GalleryPhoto {
   id: string;
@@ -55,8 +55,11 @@ export async function checkServerStatus(
   baseUrl: string | null,
   supabaseToken: string
 ): Promise<{ state: ConnectivityState; error?: string; code?: string; stage?: string }> {
+  if (!baseUrl) {
+    return { state: "offline", error: "No public Tailscale Funnel URL is registered. Run ./fotoro nodesync." };
+  }
   try {
-    const res = await fetch(baseUrl ? `${baseUrl}/api/v1/me` : "/api/connectivity", {
+    const res = await fetch(`${baseUrl}/api/v1/me`, {
       headers: authHeaders(supabaseToken),
       signal: AbortSignal.timeout(7_000),
     });
@@ -69,15 +72,7 @@ export async function checkServerStatus(
         stage: (data as { stage?: string }).stage,
       };
     }
-    if (baseUrl || (data as { online?: boolean }).online) {
-      return { state: "online" };
-    }
-    return {
-      state: "offline",
-      error: (data as { error?: string }).error ?? "Home server offline",
-      code: (data as { code?: string }).code,
-      stage: (data as { stage?: string }).stage,
-    };
+    return { state: "online" };
   } catch (err) {
     return {
       state: "offline",

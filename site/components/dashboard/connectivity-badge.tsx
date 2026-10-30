@@ -30,7 +30,7 @@ export function useNodeConnectivity(
 
     setState("checking");
 
-    const result = await checkServerStatus(null, supabaseToken);
+    const result = await checkServerStatus(node.direct_url ?? null, supabaseToken);
     setState(result.state);
     setError(result.error ?? null);
   }, [node, supabaseToken]);
@@ -63,18 +63,20 @@ export function ConnectivityBadge({
       ? "Checking…"
       : state === "online"
         ? "Online"
+        : state === "reconnecting"
+          ? "Reconnecting…"
         : state === "syncing"
           ? "Syncing"
           : "Offline";
 
   const Icon =
-    state === "online" ? Wifi : state === "checking" ? Loader2 : WifiOff;
+    state === "online" ? Wifi : state === "checking" || state === "reconnecting" ? Loader2 : WifiOff;
 
   return (
     <div className="flex items-center gap-2">
       <Badge variant={variant}>
         <Icon
-          className={`mr-1 size-3 ${state === "checking" ? "animate-spin" : ""}`}
+          className={`mr-1 size-3 ${state === "checking" || state === "reconnecting" ? "animate-spin" : ""}`}
         />
         {label}
       </Badge>

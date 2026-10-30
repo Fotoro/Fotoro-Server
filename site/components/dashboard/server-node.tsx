@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { Server, Wifi, WifiOff } from "lucide-react";
+import { Loader2, Server, Wifi, WifiOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { NodePublic } from "@/lib/fotoro-local";
+import type { ConnectivityState, NodePublic } from "@/lib/fotoro-local";
 
 export function ServerNodeCard({
   node,
@@ -12,7 +12,7 @@ export function ServerNodeCard({
   connectError,
 }: {
   node: NodePublic | null;
-  liveState?: "online" | "offline" | "checking" | "syncing";
+  liveState?: ConnectivityState;
   connectError?: string | null;
 }) {
   if (!node) {
@@ -49,12 +49,14 @@ export function ServerNodeCard({
           </h3>
         </div>
         <Badge variant={online ? "success" : "outline"}>
-          {online ? (
+          {liveState === "reconnecting" || liveState === "checking" ? (
+            <Loader2 className="mr-1 size-3 animate-spin" />
+          ) : online ? (
             <Wifi className="mr-1 size-3" />
           ) : (
             <WifiOff className="mr-1 size-3" />
           )}
-          {online ? "Online" : "Offline"}
+          {online ? "Online" : liveState === "reconnecting" ? "Reconnecting" : liveState === "checking" ? "Checking" : "Offline"}
         </Badge>
       </div>
       <dl className="divide-y divide-border">

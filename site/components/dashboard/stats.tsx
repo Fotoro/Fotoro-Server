@@ -6,8 +6,8 @@ import { formatBytes, formatCount } from "@/lib/fotoro-server-data";
 
 export function DashboardStats() {
   const { stats, online } = useServerData();
-  const live = online === "online" && stats;
-  const unavailable = online === "online" ? "Metrics unavailable" : "Server offline";
+  const live = (online === "online" || online === "reconnecting") && stats;
+  const unavailable = online === "online" ? "Metrics unavailable" : online === "reconnecting" ? "Reconnecting…" : "Connect your server";
 
   const items = [
     {

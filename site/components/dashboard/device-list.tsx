@@ -29,14 +29,14 @@ export function DeviceList() {
         <div className="flex items-center gap-2">
           <Cpu className="size-4 text-foreground" />
           <h3 className="text-sm font-semibold tracking-tight">Linked devices</h3>
-          <Badge variant="outline">{online === "online" ? devices.length : "—"}</Badge>
+          <Badge variant="outline">{online === "online" || online === "reconnecting" ? devices.length : "—"}</Badge>
         </div>
       </div>
-      {online !== "online" ? (
+      {online !== "online" && online !== "reconnecting" ? (
         <p className="px-5 py-8 text-center text-sm text-muted-foreground">Connect your server to see paired devices.</p>
       ) : devices.length === 0 ? (
         <p className="px-5 py-8 text-center text-sm text-muted-foreground">
-          Device list unavailable. Refresh the connection to try again.
+          {online === "reconnecting" ? "Reconnecting to refresh paired devices." : "No paired devices yet."}
         </p>
       ) : (
         <ul className="divide-y divide-border">

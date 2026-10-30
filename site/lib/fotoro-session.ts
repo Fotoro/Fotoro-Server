@@ -100,7 +100,9 @@ export async function getValidAccessToken(): Promise<string | null> {
       if (error || !data.session) {
         const newer = getStoredToken();
         if (newer && newer !== access && !tokenExpiringSoon(newer)) return newer;
-        clearAuth();
+        // A network or Supabase outage must not sign the user out. Only an
+        // explicit invalid refresh token proves the session is gone.
+        if (error?.status === 400 || error?.status === 401) clearAuth();
         return null;
       }
 
@@ -126,7 +128,6 @@ export async function getValidAccessToken(): Promise<string | null> {
     } catch {
       const newer = getStoredToken();
       if (newer && newer !== access && !tokenExpiringSoon(newer)) return newer;
-      clearAuth();
       return null;
     }
   };

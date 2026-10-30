@@ -93,7 +93,7 @@ export default function DashboardPage() {
 
   if (!user || !token) return null;
 
-  const serverOnline = online === "online";
+  const serverOnline = online === "online" || online === "reconnecting";
 
   return (
     <>

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { getValidAccessToken, syncProxyCookie } from "@/lib/fotoro-session";
+import { getStoredRefreshToken, getValidAccessToken, syncProxyCookie } from "@/lib/fotoro-session";
 import {
   fetchLibraryStats,
   fetchServerDevices,
@@ -44,8 +44,8 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
   const [stats, setStats] = React.useState<ServerLibraryStats | null>(null);
   const [devices, setDevices] = React.useState<ServerDevice[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const stateRef = React.useRef<ConnectivityState>("checking");
-  const failedProbes = React.useRef(0);
+  const nodeRef = React.useRef<NodePublic | null>(null);
+  const lastNodeLookup = React.useRef(0);
   const refreshInFlight = React.useRef<Promise<void> | null>(null);
 
   const refresh = React.useCallback((): Promise<void> => {
@@ -55,71 +55,72 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
       setToken(t);
       setLoading(false);
       if (!t) {
-        stateRef.current = "offline";
-        setOnline("offline");
-        setConnectError("Session expired — sign in again.");
-        setStats(null);
-        setDevices([]);
-        setLoading(false);
+        if (getStoredRefreshToken()) {
+          setOnline("reconnecting");
+          setConnectError("Sign-in refresh is temporarily unavailable. Retrying.");
+        } else {
+          setOnline("offline");
+          setConnectError("Session expired — sign in again.");
+        }
         return;
       }
 
       void syncProxyCookie(t).catch(() => {});
-      let nextNode: NodePublic | null = null;
-      try {
-        const response = await fetch("/api/nodes", {
-          headers: { Authorization: `Bearer ${t}` },
-          signal: AbortSignal.timeout(8_000),
-        });
-        if (!response.ok) throw new Error(`Device lookup failed (${response.status})`);
-        const body = await response.json();
-        nextNode = body.node ?? null;
-      } catch (error) {
-        setConnectError(error instanceof Error ? error.message : "Device lookup failed");
-        stateRef.current = "offline";
-        setOnline("offline");
-        return;
+      let nextNode = nodeRef.current;
+      if (!nextNode || Date.now() - lastNodeLookup.current > 10 * 60_000) {
+        try {
+          const response = await fetch("/api/nodes", {
+            headers: { Authorization: `Bearer ${t}` },
+            signal: AbortSignal.timeout(6_000),
+          });
+          if (!response.ok) throw new Error(`Device lookup failed (${response.status})`);
+          const body = await response.json();
+          nextNode = body.node ?? null;
+          nodeRef.current = nextNode;
+          lastNodeLookup.current = Date.now();
+          setNode(nextNode);
+          setEndpoint(nextNode?.direct_url ?? null);
+        } catch (error) {
+          if (!nextNode) {
+            setConnectError(error instanceof Error ? error.message : "Device lookup failed");
+            setOnline("reconnecting");
+            return;
+          }
+          // Keep the registered URL already in use when cloud lookup blips.
+        }
       }
-      setNode(nextNode);
       const baseUrl = nextNode?.direct_url ?? null;
-      setEndpoint(baseUrl);
       if (!nextNode) {
-        stateRef.current = "offline";
         setOnline("offline");
         setConnectError("No server linked to this account.");
         return;
       }
+      if (!baseUrl) {
+        setOnline("reconnecting");
+        setConnectError("No public Tailscale Funnel URL is registered. Run ./fotoro nodesync.");
+        return;
+      }
       const conn = await checkServerStatus(baseUrl, t);
       if (conn.state !== "online") {
-        failedProbes.current++;
-        // A wake-up or one lost relay response should not make an open library
-        // flash offline and discard its measured data.
-        if (stateRef.current === "online" && failedProbes.current < 2) {
-          setLoading(false);
-          return;
-        }
-        stateRef.current = "offline";
-        setOnline("offline");
+        setOnline("reconnecting");
         setConnectError(conn.error ?? null);
-        setStats(null);
-        setDevices([]);
-        setLoading(false);
         return;
       }
 
-      failedProbes.current = 0;
-      stateRef.current = "online";
       setOnline("online");
       setConnectError(null);
       const [nextStats, nextDevices] = await Promise.allSettled([
         fetchLibraryStats(t, baseUrl),
         fetchServerDevices(t, baseUrl),
       ]);
-      if (nextStats.status === "fulfilled") setStats(nextStats.value);
+      if (nextStats.status === "fulfilled" && nextStats.value) setStats(nextStats.value);
       if (nextDevices.status === "fulfilled") setDevices(nextDevices.value);
       setLoading(false);
     };
-    refreshInFlight.current = run().finally(() => {
+    refreshInFlight.current = run().catch((error) => {
+      setOnline("reconnecting");
+      setConnectError(error instanceof Error ? error.message : "Connection check failed. Retrying.");
+    }).finally(() => {
       refreshInFlight.current = null;
     });
     return refreshInFlight.current;
@@ -141,6 +142,14 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [refresh]);
+
+  React.useEffect(() => {
+    if (online !== "reconnecting") return;
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 10_000);
+    return () => clearInterval(id);
+  }, [online, refresh]);
 
   return (
     <ServerDataContext.Provider

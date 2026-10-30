@@ -25,7 +25,7 @@ export default function StoragePage() {
   const { stats, online, token, endpoint } = useServerData();
   const [backup, setBackup] = React.useState<BackupStatus | null>(null);
   const [syncing, setSyncing] = React.useState(false);
-  const live = online === "online" ? stats : null;
+  const live = online === "online" || online === "reconnecting" ? stats : null;
 
   const refreshBackup = React.useCallback(async () => {
     if (!token || online !== "online") return;
@@ -99,7 +99,7 @@ export default function StoragePage() {
         <div className="matrix-panel mt-8 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-medium">Automatic backup</h2>
-            <button type="button" onClick={() => void syncBackup()} disabled={!backup?.available || syncing}
+            <button type="button" onClick={() => void syncBackup()} disabled={!backup?.available || syncing || online !== "online"}
               className="rounded-md border border-border px-3 py-1.5 text-xs disabled:opacity-50">
               {syncing ? "Checking…" : "Back up pending now"}
             </button>
