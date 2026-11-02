@@ -22,8 +22,8 @@
     --destructive-foreground: 40 11% 5%;
     --border: 32 10% 22%;
     --input: 32 10% 22%;
-    --ring: 13 66% 63%;
-    --brand: 13 66% 63%;
+    --ring: 347 77% 50%;
+    --brand: 347 77% 50%;
     --radius: 0.75rem;
 
     color-scheme: dark;
@@ -48,8 +48,8 @@
     --destructive-foreground: 0 0% 100%;
     --border: 30 12% 78%;
     --input: 30 12% 78%;
-    --ring: 14 58% 40%;
-    --brand: 14 58% 40%;
+    --ring: 347 84% 38%;
+    --brand: 347 84% 38%;
     color-scheme: light;
   }
 

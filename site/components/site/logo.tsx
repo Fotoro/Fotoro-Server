@@ -19,9 +19,11 @@ export function Logo({
       )}
       aria-label="Fotoro home"
     >
-      <span className="inline-grid size-8 grid-cols-3 place-items-center p-1" aria-hidden="true">
-        {Array.from({ length: 9 }, (_, index) => <span key={index} className={index === 4 ? "size-1.5 rounded-full bg-[hsl(var(--brand))]" : "size-1 rounded-full bg-[hsl(var(--brand))]/65"} />)}
-      </span>
+      <svg className="size-8 text-[hsl(var(--brand))]" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M4.5 4.5h23v23h-23z" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M20.5 9.5h-9v13m0-6.5h7" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
+        <path d="M23.5 23.5h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      </svg>
       {showWord ? (
         <span className="font-display text-[27px] leading-none tracking-[-0.04em]">fotoro<span className="text-[hsl(var(--brand))]">.</span></span>
       ) : null}
