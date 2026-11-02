@@ -48,8 +48,8 @@ export function DashboardSidebar() {
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-border bg-card px-4 py-5 md:flex md:flex-col">
       <div className="flex h-8 items-center justify-between">
         <Logo />
-        <Badge variant="outline" className="text-[10px]">
-          LOCAL
+        <Badge variant="outline" className="text-xs font-normal">
+          Home server
         </Badge>
       </div>
 
@@ -89,7 +89,7 @@ export function DashboardSidebar() {
         })}
       </nav>
 
-      <div className="mt-6 border border-border bg-background/40 bg-dot-grid p-3">
+      <div className="mt-6 border border-border bg-background p-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-foreground">Media / free disk</p>
           <p className="text-[10px] text-muted-foreground">

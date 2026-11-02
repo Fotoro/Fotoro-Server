@@ -22,9 +22,9 @@ export default function LoginPage() {
       <div className="grid w-full max-w-5xl overflow-hidden border border-border bg-card lg:grid-cols-2">
         <div className="p-7 sm:p-12">
           <div className="mb-6">
-            <p className="matrix-label">Your archive / sign in</p>
-            <h1 className="mt-5 text-4xl font-semibold tracking-tight">
-              Welcome back.
+            <p className="matrix-label">Your Fotoro account</p>
+            <h1 className="mt-5 text-4xl font-medium">
+              Open your archive
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Continue with the account that pairs your devices to your local server.
@@ -50,7 +50,7 @@ export default function LoginPage() {
           </p>
           <p className="mt-6 text-sm text-muted-foreground">New here? <Link href="/download" className="border-b border-[hsl(var(--brand))] pb-1 text-[hsl(var(--brand))]">Set up your Linux server</Link> first.</p>
         </div>
-        <div className="matrix-art hidden lg:block" aria-hidden="true"><div className="matrix-art__frame" /><p className="absolute bottom-8 left-8 z-10 font-mono text-xs uppercase tracking-widest">A private route back to every frame.</p></div>
+        <div className="matrix-art hidden lg:block" aria-hidden="true"><div className="matrix-art__frame" /><p className="absolute bottom-8 left-8 z-10 text-sm">Your server holds the originals</p></div>
       </div>
     </main>
   );

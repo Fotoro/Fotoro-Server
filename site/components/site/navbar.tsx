@@ -18,17 +18,9 @@ import { isAuthenticated } from "@/lib/fotoro-session";
 import { cn } from "@/lib/utils";
 
 export function Navbar() {
-  const [scrolled, setScrolled] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [loggedIn, setLoggedIn] = React.useState(false);
   const pathname = usePathname();
-
-  React.useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   React.useEffect(() => setOpen(false), [pathname]);
 
@@ -38,12 +30,7 @@ export function Navbar() {
 
   return (
     <header
-      className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-all duration-300",
-        scrolled
-          ? "border-b border-border bg-background/95 backdrop-blur"
-          : "border-b border-border bg-background/90"
-      )}
+      className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background"
     >
       <div className="container-tight flex h-16 items-center justify-between gap-6">
         <div className="flex items-center gap-8">
@@ -54,7 +41,7 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors",
+                  "px-3 py-1.5 text-sm transition-colors",
                   pathname === link.href || pathname.startsWith(`${link.href}/`)
                     ? "text-[hsl(var(--brand))]"
                     : "text-muted-foreground hover:text-foreground"
@@ -80,7 +67,7 @@ export function Navbar() {
               aria-label="GitHub repository"
             >
               <Github className="size-4" />
-              <span className="hidden lg:inline">Star</span>
+              <span className="hidden lg:inline">Source</span>
             </Link>
           </Button>
           {loggedIn ? (

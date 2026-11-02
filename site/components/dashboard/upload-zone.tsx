@@ -87,7 +87,7 @@ export function UploadZone({ onUploaded }: { onUploaded?: () => void }) {
   }
 
   return (
-    <section className="self-start rounded-xl border border-border bg-card ring-soft" aria-label="Offload photos and videos">
+    <section className="self-start border border-border bg-card" aria-label="Offload photos and videos">
       <div className="border-b border-border px-5 py-4">
         <div className="flex items-center gap-2">
           <Upload className="size-4 text-foreground" />

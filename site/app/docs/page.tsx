@@ -16,7 +16,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 
 export default function DocsPage() {
   return <PageShell><div className="container-tight pb-28">
-    <div className="relative overflow-hidden border-b border-border pb-14"><div className="absolute -right-10 -top-10 size-56 bg-dot-grid opacity-50" aria-hidden="true" /><p className="matrix-label">Field manual / server + web</p><h1 className="relative mt-5 text-5xl font-semibold tracking-[-0.06em] sm:text-7xl">Run Fotoro.</h1><p className="relative mt-5 max-w-2xl text-muted-foreground">Current setup and API entry points for the Linux server. The Android app and packaged releases are still in development.</p></div>
+    <div className="relative border-b border-border pb-14"><p className="matrix-label">System documentation</p><h1 className="relative mt-5 text-5xl font-medium sm:text-7xl">How Fotoro works</h1><p className="relative mt-5 max-w-2xl text-muted-foreground">The Linux server, web dashboard and Android app share one media catalogue and a device pairing flow.</p></div>
     <div className="mt-12 flex gap-10"><DocsSidebar /><article className="min-w-0 max-w-3xl flex-1">
       <Section id="overview" title="Overview">
         <p>Fotoro has a Go server for storage and ingestion, and a separate website for account sign-in and browsing. The server listens on <code>127.0.0.1:8765</code> by default. The website connects to the server linked to your account.</p>
