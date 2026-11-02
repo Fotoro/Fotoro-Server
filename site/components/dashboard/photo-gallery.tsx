@@ -30,7 +30,7 @@ function mergePhotos(prev: GalleryPhoto[], next: GalleryPhoto[]): GalleryPhoto[]
   return added.length === 0 ? prev : [...prev, ...added];
 }
 
-function LazyThumb({ photo, index }: { photo: GalleryPhoto; index: number }) {
+const LazyThumb = React.memo(function LazyThumb({ photo, index }: { photo: GalleryPhoto; index: number }) {
   const eager = index < EAGER_COUNT;
   const [src, setSrc] = React.useState(photo.thumbnail);
   React.useEffect(() => setSrc(photo.thumbnail), [photo.thumbnail]);
@@ -58,7 +58,7 @@ function LazyThumb({ photo, index }: { photo: GalleryPhoto; index: number }) {
       )}
     </div>
   );
-}
+});
 
 function timelineGroups(photos: GalleryPhoto[]) {
   const groups = new Map<string, TimelineItem[]>();
@@ -134,6 +134,8 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
   const totalRef = React.useRef(0);
   const fetchingRef = React.useRef(false);
   const prefetchRef = React.useRef<Map<number, GalleryPhoto[]>>(new Map());
+  const prefetchingRef = React.useRef<Set<number>>(new Set());
+  const generationRef = React.useRef(0);
   const sentinelRef = React.useRef<HTMLDivElement>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const scrollFrameRef = React.useRef<number | null>(null);
@@ -168,12 +170,15 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
 
   const prefetchPage = React.useCallback(
     (p: number) => {
-      if (!token || prefetchRef.current.has(p)) return;
+      if (!token || prefetchRef.current.has(p) || prefetchingRef.current.has(p)) return;
+      const generation = generationRef.current;
+      prefetchingRef.current.add(p);
       void fetchPhotosPage(token, p, PAGE_SIZE, totalRef.current, endpoint)
         .then((data) => {
-          if (data.photos.length > 0) prefetchRef.current.set(p, data.photos);
+          if (generation === generationRef.current && data.photos.length > 0) prefetchRef.current.set(p, data.photos);
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => { if (generation === generationRef.current) prefetchingRef.current.delete(p); });
     },
     [token, endpoint]
   );
@@ -181,6 +186,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
   const loadPage = React.useCallback(
     async (p: number, append: boolean) => {
       if (!token || fetchingRef.current) return;
+      const generation = generationRef.current;
       fetchingRef.current = true;
       if (append) setLoadingMore(true);
       else setLoading(true);
@@ -205,29 +211,22 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
               endpoint
             );
 
+        if (generation !== generationRef.current) return;
         totalRef.current = data.total;
         pageRef.current = p;
         setTotal(data.total);
-        setPhotos((prev) => {
-          const merged = append ? mergePhotos(prev, data.photos) : data.photos;
-          if (merged.length < data.total && data.photos.length === PAGE_SIZE) {
-            prefetchPage(p + 1);
-          }
-          return merged;
-        });
+        setPhotos((prev) => append ? mergePhotos(prev, data.photos) : data.photos);
+        if (data.photos.length === PAGE_SIZE && p * PAGE_SIZE < data.total) prefetchPage(p + 1);
       } catch (err) {
+        if (generation !== generationRef.current) return;
         const msg = err instanceof Error ? err.message : "Failed to load photos";
         setError(msg);
-        if (!append) {
-          setPhotos([]);
-          setTotal(0);
-          totalRef.current = 0;
-          pageRef.current = 1;
-        }
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
-        fetchingRef.current = false;
+        if (generation === generationRef.current) {
+          setLoading(false);
+          setLoadingMore(false);
+          fetchingRef.current = false;
+        }
       }
     },
     [token, endpoint, prefetchPage]
@@ -258,9 +257,12 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
 
   React.useEffect(() => {
     if (!token || !nodeReady) return;
+    generationRef.current++;
+    fetchingRef.current = false;
     pageRef.current = 1;
     totalRef.current = 0;
     prefetchRef.current.clear();
+    prefetchingRef.current.clear();
     void loadPage(1, false);
   }, [token, nodeReady, endpoint]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -268,9 +270,12 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
     ref,
     () => ({
       refresh: () => {
+        generationRef.current++;
+        fetchingRef.current = false;
         pageRef.current = 1;
         totalRef.current = 0;
         prefetchRef.current.clear();
+        prefetchingRef.current.clear();
         void loadPage(1, false);
       },
     }),
@@ -295,7 +300,11 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!token) return;
+    generationRef.current++;
+    const generation = generationRef.current;
+    fetchingRef.current = false;
     prefetchRef.current.clear();
+    prefetchingRef.current.clear();
     setSelected(null);
     if (!query.trim()) {
       pageRef.current = 1;
@@ -306,17 +315,19 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
     setError(null);
     try {
       const results = await searchPhotos(endpoint, token, query.trim());
+      if (generation !== generationRef.current) return;
       setPhotos(results);
       setTotal(results.length);
       totalRef.current = results.length;
       pageRef.current = 1;
     } catch (err) {
+      if (generation !== generationRef.current) return;
       setError(err instanceof Error ? err.message : "Search failed");
       setPhotos([]);
       setTotal(0);
       totalRef.current = 0;
     } finally {
-      setSearching(false);
+      if (generation === generationRef.current) setSearching(false);
     }
   }
 
@@ -345,7 +356,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search your library (dog, beach, sunset…)"
+          placeholder="Search captions or dates"
             className="pl-9"
           />
         </div>
@@ -358,9 +369,12 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
             variant="ghost"
             size="icon"
             onClick={() => {
+              generationRef.current++;
+              fetchingRef.current = false;
               setQuery("");
               pageRef.current = 1;
               prefetchRef.current.clear();
+              prefetchingRef.current.clear();
               void loadPage(1, false);
             }}
           >
@@ -375,7 +389,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
         </p>
       ) : null}
 
-      <div className="min-h-0 flex-1 rounded-xl border border-border bg-card/40 ring-soft">
+      <div className="min-h-0 flex-1 border border-border bg-card/40">
         <div
           ref={scrollRef}
           className="h-[min(70vh,720px)] overflow-y-auto overscroll-contain p-3"
@@ -388,7 +402,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
             });
           }}
         >
-          {loading ? (
+          {loading && photos.length === 0 ? (
             <div className="flex h-full min-h-[240px] items-center justify-center text-muted-foreground">
               <Loader2 className="mr-2 size-5 animate-spin" />
               Loading photos…
