@@ -45,7 +45,7 @@ export function DashboardSidebar() {
     devices.length > 0 ? String(devices.length) : live ? String(stats.devices_count) : undefined;
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-border bg-card px-4 py-5 md:flex md:flex-col">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-border bg-card px-4 py-6 md:flex md:flex-col">
       <div className="flex h-8 items-center justify-between">
         <Logo />
         <Badge variant="outline" className="text-xs font-normal">
@@ -53,7 +53,7 @@ export function DashboardSidebar() {
         </Badge>
       </div>
 
-      <nav className="mt-8 flex-1 space-y-0.5" aria-label="Dashboard">
+      <nav className="mt-14 flex-1 space-y-1" aria-label="Dashboard">
         {NAV.map((item) => {
           const active =
             pathname === item.href ||
@@ -64,13 +64,14 @@ export function DashboardSidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "group flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+                "group flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors",
                 active
-                  ? "border-l-2 border-[hsl(var(--brand))] bg-accent text-foreground"
-                  : "border-l-2 border-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
               <span className="flex items-center gap-2.5">
+                <span className={cn("size-1.5 rounded-full", active ? "bg-[hsl(var(--brand))]" : "bg-transparent")} aria-hidden />
                 <item.icon
                   className={cn(
                     "size-4",
@@ -89,7 +90,7 @@ export function DashboardSidebar() {
         })}
       </nav>
 
-      <div className="mt-6 border border-border bg-background p-3">
+      <div className="mt-6 rounded-xl border border-border bg-background p-4">
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-foreground">Media / free disk</p>
           <p className="text-[10px] text-muted-foreground">

@@ -44,7 +44,7 @@ const LazyThumb = React.memo(function LazyThumb({ photo, index }: { photo: Galle
         <img
           src={src}
           alt=""
-          className="size-full object-cover"
+          className="size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.035]"
           loading={eager ? "eager" : "lazy"}
           decoding="async"
           fetchPriority={index < 4 ? "high" : "auto"}
@@ -349,14 +349,14 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
+    <div className="flex h-full min-h-0 flex-col gap-4">
       <form onSubmit={handleSearch} className="flex shrink-0 gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search captions or dates"
+            placeholder="Search captions or dates"
             className="pl-9"
           />
         </div>
@@ -368,6 +368,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
             type="button"
             variant="ghost"
             size="icon"
+            aria-label="Clear search"
             onClick={() => {
               generationRef.current++;
               fetchingRef.current = false;
@@ -384,12 +385,12 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
       </form>
 
       {displayError ? (
-        <p className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
+        <p className="shrink-0 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-foreground">
           {displayError}
         </p>
       ) : null}
 
-      <div className="min-h-0 flex-1 border border-border bg-card/40">
+      <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-border bg-card/50">
         <div
           ref={scrollRef}
           className="h-[min(70vh,720px)] overflow-y-auto overscroll-contain p-3"
@@ -403,10 +404,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
           }}
         >
           {loading && photos.length === 0 ? (
-            <div className="flex h-full min-h-[240px] items-center justify-center text-muted-foreground">
-              <Loader2 className="mr-2 size-5 animate-spin" />
-              Loading photos…
-            </div>
+            <div role="status" aria-label="Loading photos" className="grid grid-cols-3 gap-2 sm:grid-cols-5">{Array.from({ length: 15 }, (_, index) => <div key={index} className="aspect-square rounded-md bg-muted/60" />)}</div>
           ) : photos.length === 0 ? (
             <div className="flex h-full min-h-[240px] flex-col items-center justify-center text-center">
               <ImageIcon className="mb-3 size-8 text-muted-foreground" />
@@ -418,7 +416,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
             <>
               <div className="relative" style={{ height: timeline.height }}>
                 {visibleRows.map((row) => row.month ? (
-                  <h3 key={row.key} className="absolute inset-x-0 px-1 text-sm font-medium text-foreground" style={{ top: row.top, height: row.height }}>
+                  <h3 key={row.key} className="font-display absolute inset-x-0 px-1 text-xl text-foreground" style={{ top: row.top, height: row.height }}>
                     {row.month === "Unknown date" ? row.month : new Date(`${row.month}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
                   </h3>
                 ) : (
@@ -427,7 +425,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
                       <button
                         key={photo.id}
                         type="button"
-                        className="aspect-square overflow-hidden rounded-md border border-border bg-muted/30 transition hover:border-foreground/30"
+                        className="group aspect-square overflow-hidden rounded-md border border-border bg-muted/30 transition-[border-color,box-shadow] hover:border-foreground/30 hover:shadow-lg"
                         onClick={() => setSelected(photo)}
                         aria-label={`Open ${photo.caption || photo.category || "media"}`}
                       >
@@ -441,9 +439,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
               <div ref={sentinelRef} className="h-2 w-full" aria-hidden />
 
               {loadingMore ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                </div>
+                <p role="status" className="py-4 text-center text-xs text-muted-foreground">Bringing more moments into view…</p>
               ) : hasMore ? (
                 <p className="py-2 text-center text-[10px] text-muted-foreground">
                   Scroll for more…

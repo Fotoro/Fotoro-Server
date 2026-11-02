@@ -43,13 +43,13 @@ export function DashboardStats() {
       {items.map((s) => (
         <div
           key={s.label}
-          className="matrix-panel p-5"
+          className="rounded-2xl border border-border bg-card p-6"
         >
           <div className="relative flex items-center gap-2 text-xs text-muted-foreground">
             <s.icon className="size-3.5 text-[hsl(var(--brand))]" />
             {s.label}
           </div>
-          <p className="relative mt-5 font-mono text-3xl tracking-tight text-foreground">
+          <p className="font-display relative mt-6 text-4xl tracking-tight text-foreground">
             {s.value}
           </p>
           <p className="relative mt-2 text-xs text-muted-foreground">{s.delta}</p>

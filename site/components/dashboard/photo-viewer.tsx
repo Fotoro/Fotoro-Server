@@ -161,7 +161,7 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
   const original = photo.original || photo.originalFallback || "";
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={`${title}, item ${position} of ${total}`} className="fixed inset-0 z-[60] flex flex-col bg-[hsl(220_12%_5%)] text-white" onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-label={`${title}, item ${position} of ${total}`} className="fixed inset-0 z-[60] flex flex-col bg-[#0F0E0C] text-white" onClick={onClose}>
       <header className="flex min-h-14 items-center justify-between gap-3 border-b border-white/15 px-3 sm:px-5" onClick={(event) => event.stopPropagation()}>
         <div className="min-w-0"><p className="truncate text-sm font-medium">{title}</p><p className="font-mono text-[11px] text-white/55">{position.toLocaleString()} / {total.toLocaleString()}</p></div>
         <div className="flex items-center gap-1">
