@@ -1,37 +1,33 @@
-# Fotoro website and dashboard
+# Website application architecture
 
-This Next.js app provides the Fotoro website, owner dashboard, canonical photo timeline, device pairing, and resumable browser uploads. The Go API and SQLite library live in the sibling `FotoroModel` repository.
+`site/` is a Next.js App Router application with two clear surfaces: public, server-rendered product content and an authenticated owner dashboard. The host's Go API and SQLite catalogue remain the authority for media and measurements.
 
-## Local development
+## Identity and routes
 
-```bash
-cp .env.example .env.local
-# Configure Supabase and set FOTORO_LOCAL_SERVER_URL=http://127.0.0.1:8765
-npm install
-npm run dev
-```
+Google sign-in establishes a Supabase session. The site resolves the signed-in user's `nodes` record, which identifies the host endpoint. The host checks the owner identity again on protected requests. The `/api/fotoro/...` route is an authenticated fallback proxy for the browser; `/api/v1/...` exposes compatible device routes. The pairing route creates a short-lived invitation on the linked host, and the phone redeems it for its own restricted token.
 
-Build with `go build -o fotoro .` in `FotoroModel`, then run `./fotoro setup` and `./fotoroctl start` before opening the dashboard. Use `./fotoroctl stop` to turn off the user socket and API; boot startup is not enabled. The browser signs in with Supabase. The website looks up the signed-in owner's `nodes` row, then sends the bearer token to Go. Go independently checks that the user matches its locally bound owner. `/api/fotoro/...` is the authenticated website proxy; `/api/v1/...` is the same-origin device API and requires a valid owner or paired-device bearer token for protected routes.
+The site can run beside the Go API on a private tailnet host, or as a hosted public frontend with a deliberately configured Tailscale Funnel to the host. A hosted server process cannot reach a private tailnet address merely because the browser can. Only the `https://*.ts.net` endpoint registered for the owner is accepted for the hosted relay. The API remains authenticated in both deployments.
 
-## Private host deployment
+## Media path
 
-Run `npm run build` and `npm start -- -H 127.0.0.1` on the same Linux host as Go, with `FOTORO_LOCAL_SERVER_URL=http://127.0.0.1:8765`. Set `FOTORO_PRIVATE_SITE=1` for the Go process so Tailscale Serve points to the Next.js port (3000 by default). The phone and browser must be on the tailnet. Configure `FOTORO_BACKUP_DIR` and `FOTORO_BACKUP_MOUNT_DIR` on an independent mounted filesystem for two-copy verification. See the [server runbook](../../FotoroModel/SERVER_V1_RUNBOOK.md) for the full setup and checks.
+| Step | Behavior |
+| --- | --- |
+| List | `/api/v1/media` returns 100 records at a time with capture date, type, copy status and display links. |
+| Grid | Virtualized rows use small thumbnails, native lazy loading and asynchronous decode. |
+| Viewer | A medium preview appears first, then an available detail copy; deep zoom requests the original. Adjacent previews are prefetched. |
+| Direct delivery | Signed media links are scoped to ID, variant and expiry, with private browser caching. The website relay is the fallback. |
+| Upload | Browser uploads use resumable chunks and verify the server's receipt; they do not rewrite original bytes. |
 
-A cloud-hosted website cannot reach a private Tailscale endpoint unless its server runtime also joins the tailnet. `FOTORO_ALLOW_TAILNET_RELAY=1` only enables this lookup on a tailnet-capable host. For a hosted dashboard, enabling Tailscale Funnel on the home host registers its `https://*.ts.net` URL as the relay route; the website accepts only that HTTPS origin and still requires owner or paired-device authentication. Set `FOTORO_DISABLE_PUBLIC_RELAY=1` on a private deployment that must never use Funnel.
+The gallery retains loaded photos during a transient refresh failure. In-flight prefetches are deduplicated, and stale page results are ignored when the server endpoint or search changes. These choices keep scrolling work bounded without claiming a measured frame rate on every device.
 
-## Library delivery and storage figures
+## SEO and editorial content
 
-The dashboard gets paginated timeline metadata through its authenticated `/api/fotoro/media` relay. Go returns short-lived, signed `direct_thumbnail_url`, `direct_preview_url`, `direct_detail_url`, and `direct_content_url` fields when its configured Tailscale Funnel URL is available. The browser fetches those image bytes directly from the home server, so a Vercel function does not sit in the hot path for every tile. The signatures cover the media ID, size variant, and expiry; the old authenticated proxy URLs remain as fallbacks. The grid renders only visible rows, fetches 100 metadata records at a time, and prefetches the next page. The viewer shows the 1024 px preview immediately, upgrades to a 2048 px display copy when available, and requests the unchanged original only at deep zoom. Older photos without a detail copy still load the original after a short pause. Adjacent previews are prefetched for left and right navigation. PDF files open in the document viewer; other uploaded documents get an open-original action.
+The public base URL is `https://fotoro.vercel.app` unless `NEXT_PUBLIC_SITE_URL` names a verified replacement. Public pages set their own canonical and social URL. `sitemap.ts` lists the public pages and source-controlled journal entries; `robots.ts` blocks private dashboard and API paths. Article pages render question-led headings and `BlogPosting` structured data from `content/blog.ts`.
 
-The dashboard connectivity check uses `/api/v1/me`. Idempotent relay reads retry once when a sleeping socket wakes, and foreground checks refresh the state when the tab becomes visible. Session refresh is shared across concurrent requests and tabs. The storage card reads server-measured `media_bytes` for originals and `disk_free_bytes` for remaining space; preview cache and staging usage are shown separately. On an existing Go database, run `./fotoro reconcile-sizes` once if imported media has zero recorded file sizes.
+Only source changes can publish a journal post. There is no editor form, upload route or CMS. `/.github/CODEOWNERS` in the repository assigns journal review to `@chknaren6`; branch protection must require that review for repository-level enforcement. Article copy should answer a concrete product question and be checked against the current host and Android behavior before publication.
 
-## Check an end-to-end offload
+## Boundaries and verification
 
-1. Run `./fotoroctl start`, start this website, sign in with the same owner account, and open `/dashboard/library`.
-2. Select a **disposable** image in the Offload panel. The receipt shows its media ID and whether one or two copies are verified. The original is accepted before the background thumbnail appears in the timeline.
-3. Select **Verify download** to compare the saved file with the selected file. Files up to 32 MiB receive a full downloaded SHA-256 comparison; larger files receive first and last range comparisons. Select **Check backup** after the secondary disk has copied the original. Keep the phone copy until the receipt says two verified copies.
-4. To check interruption and resume without browser timing, use a disposable JPEG or PNG and run `npm run smoke:offload -- /path/to/disposable.png` with `FOTORO_TEST_TOKEN` set to the signed-in owner's short-lived Supabase access token. The script uploads half, checks the server offset, resumes, compares the downloaded SHA-256, and waits for a thumbnail. Add `--require-backup` when testing on an independent mounted backup disk. `FOTORO_TEST_ORIGIN` defaults to `http://127.0.0.1:3000`.
+The website does not store originals, decide whether a phone file may be deleted, or manufacture dashboard figures. Supabase holds account and node data; the host holds media, upload state, device-token hashes and measured storage state. A second-copy indicator depends on a separately mounted and verified backup target.
 
-The smoke test leaves the disposable media in the library. Keep the token out of terminal history and logs. It has not been run against the real owner account or storage in this repository.
-
-For an isolated local proxy check without a Supabase account, start `./start-fotoro` with a fresh temporary `FOTORO_DB` path and `FOTORO_ALLOW_UNAUTHENTICATED_LOCAL=1`, then run `npm run smoke:offload -- /path/to/disposable.png --direct`. This mode calls the same-origin `/api/v1` route and deliberately does **not** test signed-in owner authorization. Never enable the local bypass against the real library or a network listener.
+`npm run typecheck` and `npm run build` check the public routes and client code. The `smoke:offload` script exercises resumable upload against a disposable image and leaves that image in the target library. Private dashboard behavior still needs an authenticated host and Tailscale route for end-to-end checks.
