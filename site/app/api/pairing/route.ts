@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySupabaseToken } from "@/lib/auth-verify";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { relayFetch } from "@/lib/fotoro-relay";
+import { relayFetch, sanitizeRelayError } from "@/lib/fotoro-relay";
 import { normalizeFotoroServerUrl } from "@/lib/fotoro-url";
 
 export async function POST(request: NextRequest) {
@@ -31,7 +31,11 @@ export async function POST(request: NextRequest) {
     });
     const body = await upstream.json().catch(() => ({ error: "Pairing failed" }));
     return NextResponse.json(body, { status: upstream.status, headers: { "Cache-Control": "no-store" } });
-  } catch {
-    return NextResponse.json({ error: "Could not create pairing session" }, { status: 503 });
+  } catch (error) {
+    const detail = sanitizeRelayError(error instanceof Error ? error.message : "Pairing service unavailable");
+    return NextResponse.json({ error: `Could not reach your running Fotoro server. ${detail}` }, {
+      status: 503,
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 }
