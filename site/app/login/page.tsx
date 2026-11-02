@@ -8,6 +8,7 @@ import { LoginForm } from "./login-form";
 export const metadata: Metadata = {
   title: "Sign in",
   description: "Sign in to manage your self-hosted Fotoro instance.",
+  robots: { index: false, follow: false },
 };
 
 export default function LoginPage() {

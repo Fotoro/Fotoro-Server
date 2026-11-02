@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { publicMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { PageShell } from "@/components/site/page-shell";
 
-export const metadata: Metadata = { title: "About", description: "Fotoro is an open-source photo archive built around local storage and clear ownership." };
+export const metadata: Metadata = publicMetadata("About", "Fotoro is an open-source photo archive built around local storage and clear ownership.", "/about");
 
 export default function AboutPage() {
   return <PageShell><div className="container-tight pb-28">

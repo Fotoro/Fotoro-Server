@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { publicMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { ArrowUpRight, Database, HardDrive, Images, LockKeyhole, ScanSearch, SlidersHorizontal } from "lucide-react";
 import { PageShell } from "@/components/site/page-shell";
 
-export const metadata: Metadata = { title: "Features", description: "Explore Fotoro's ingestion, storage, backup, timeline, search, device access and local server tools." };
+export const metadata: Metadata = publicMetadata("Features", "Explore Fotoro's ingestion, storage, backup, timeline, search, device access and local server tools.", "/features");
 
 const groups = [
   { id: "ingest", index: "01", icon: Database, name: "Bring everything in", summary: "Move an existing collection or offload new media without starting over after a broken connection.", features: [

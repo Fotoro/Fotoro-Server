@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { publicMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { PageShell } from "@/components/site/page-shell";
 
-export const metadata: Metadata = { title: "How it works", description: "From local media to a searchable, backed-up Fotoro timeline." };
+export const metadata: Metadata = publicMetadata("How it works", "From local media to a searchable, backed-up Fotoro timeline.", "/how-it-works");
 
 const steps = [
   { number: "01", title: "Give it a home", text: "Build Fotoro on a Linux host, run setup, and choose primary storage. Connect a separate backup target if you have one.", line: "Linux host → local library" },

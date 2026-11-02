@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
+import { publicMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { PageShell } from "@/components/site/page-shell";
 
-export const metadata: Metadata = {
-  title: "Get started",
-  description: "Build the Fotoro Linux server from source, run setup, and open the web dashboard.",
-};
+export const metadata: Metadata = publicMetadata("Get started", "Build the Fotoro Linux server from source, run setup, and open the web dashboard.", "/download");
 
 const commands = [
   "git clone https://github.com/Fotoro/Fotoro-Model.git",

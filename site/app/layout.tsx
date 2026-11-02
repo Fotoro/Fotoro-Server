@@ -61,7 +61,6 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
-    creator: SITE.twitter,
     images: ["/og.svg"],
   },
   robots: {
@@ -74,9 +73,6 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  alternates: {
-    canonical: SITE.url,
-  },
 };
 
 const jsonLd = {
@@ -84,7 +80,7 @@ const jsonLd = {
   "@type": "SoftwareApplication",
   name: SITE.name,
   applicationCategory: "MultimediaApplication",
-  operatingSystem: "Linux",
+  operatingSystem: "Linux, Android, Web",
   description: SITE.description,
   url: SITE.url,
 };

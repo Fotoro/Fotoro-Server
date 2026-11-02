@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { publicMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { PageShell } from "@/components/site/page-shell";
 import { DocsSidebar } from "@/components/docs/sidebar";
 import { CodeBlock } from "@/components/docs/code-block";
 
-export const metadata: Metadata = { title: "Documentation", description: "Install and operate the Fotoro Linux server and web dashboard." };
+export const metadata: Metadata = publicMetadata("Documentation", "Install and operate the Fotoro Linux server and web dashboard.", "/docs");
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return <section id={id} data-doc-section className="scroll-mt-24 border-t border-border py-12 first:border-0 first:pt-0">

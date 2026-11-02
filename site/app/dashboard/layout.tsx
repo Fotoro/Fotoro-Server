@@ -5,6 +5,7 @@ import { ServerDataProvider } from "@/components/dashboard/server-data-provider"
 export const metadata: Metadata = {
   title: "Dashboard",
   description: "Manage your self-hosted Fotoro server.",
+  robots: { index: false, follow: false },
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
