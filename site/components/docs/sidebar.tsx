@@ -53,7 +53,7 @@ export function DocsSidebar() {
     <nav className="sticky top-20 hidden h-[calc(100vh-6rem)] w-60 shrink-0 overflow-y-auto border-r border-border pr-5 md:block" aria-label="Docs">
       {SECTIONS.map((section) => (
         <div key={section.heading} className="mb-6">
-          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
+          <p className="mb-2 px-3 text-xs font-medium text-muted-foreground/80">
             {section.heading}
           </p>
           <ul className="space-y-0.5">

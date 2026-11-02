@@ -13,10 +13,26 @@ const steps = [
   { number: "04", title: "Open the timeline", text: "Sign in, reach your linked server over its private route, and browse date-grouped previews. Open an original only when you need it.", line: "Your server → your screen" },
 ];
 
+const questions = [
+  { question: "Where does Fotoro store original photos?", answer: "Fotoro stores originals on the Linux host you choose. Supabase holds account and linked-server information, not the media files." },
+  { question: "Does Fotoro delete photos from my phone?", answer: "No. The Android app never deletes phone media after upload. It reports when the host has one verified copy and when an independent backup target has a second verified copy." },
+  { question: "Can an interrupted backup resume?", answer: "Yes. The Android app and browser use resumable upload sessions. When a session is still available, they continue from the byte offset saved by the host." },
+  { question: "Does the server need to stay busy all day?", answer: "No. The owner starts a user socket manually. A request wakes the API, and the service returns to socket standby after ten idle minutes." },
+];
+
 export default function HowItWorksPage() {
   return <PageShell><div className="container-tight pb-28">
     <div className="grid gap-8 border-b border-border pb-14 lg:grid-cols-[1fr_0.55fr]"><div><p className="matrix-label">From source to screen</p><h1 className="mt-5 max-w-3xl text-balance text-5xl font-medium leading-[1.02] sm:text-7xl">A path for every original</h1></div><p className="self-end text-base leading-relaxed text-muted-foreground">Fotoro keeps ingest, storage, verification and browsing visible. The archive lives on the machine you choose.</p></div>
     <div className="grid gap-px border-x border-b border-border bg-border md:grid-cols-2">{steps.map((step) => <section key={step.number} className="relative min-h-80 bg-card p-8 sm:p-10"><span className="matrix-label">Step {step.number}</span><ArrowDownRight className="absolute right-7 top-7 size-6 text-muted-foreground" strokeWidth={1.5} /><h2 className="relative mt-20 text-3xl font-medium">{step.title}</h2><p className="relative mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">{step.text}</p><p className="relative mt-8 border-t border-border pt-4 text-xs text-muted-foreground">{step.line}</p></section>)}</div>
     <div className="matrix-paper mt-12 flex flex-wrap items-center justify-between gap-6 p-8"><p className="max-w-xl text-2xl font-medium">Start with a host you control. Add your phone when you are ready.</p><Link href="/download" className="inline-flex items-center gap-2 border-b border-background pb-1 text-sm font-medium">Get started <ArrowUpRight className="size-4" /></Link></div>
+    <section className="mt-20 max-w-3xl" aria-labelledby="questions-heading">
+      <h2 id="questions-heading" className="text-3xl font-medium">Common questions</h2>
+      <div className="mt-6 divide-y divide-border border-y border-border">{questions.map((item) => <div key={item.question} className="py-6"><h3 className="text-lg font-medium">{item.question}</h3><p className="mt-2 leading-relaxed text-muted-foreground">{item.answer}</p></div>)}</div>
+    </section>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+      "@context": "https://schema.org", "@type": "FAQPage", mainEntity: questions.map((item) => ({
+        "@type": "Question", name: item.question, acceptedAnswer: { "@type": "Answer", text: item.answer },
+      })),
+    }) }} />
   </div></PageShell>;
 }

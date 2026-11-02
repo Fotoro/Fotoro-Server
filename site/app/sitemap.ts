@@ -10,17 +10,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/how-it-works",
     "/download",
     "/docs",
-    "/blog",
   ] as const;
 
-  return [...pages.map((path, i) => ({
+  return [...pages.map((path) => ({
     url: `${SITE.url}${path === "/" ? "" : path}`,
-    changeFrequency: (path === "/" ? "weekly" : "monthly") as "weekly" | "monthly",
-    priority: path === "/" ? 1 : i === 0 ? 1 : 0.8 - i * 0.05,
-  })), ...posts.map((post) => ({
+  })), ...(posts.length > 0 ? [{ url: `${SITE.url}/blog` }] : []), ...posts.map((post) => ({
     url: `${SITE.url}/blog/${post.slug}`,
     lastModified: new Date(post.updatedAt),
-    changeFrequency: "monthly" as const,
-    priority: 0.6,
   }))];
 }

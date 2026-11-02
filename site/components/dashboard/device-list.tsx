@@ -59,8 +59,7 @@ export function DeviceList() {
                         <span
                           className={cn(
                             "mr-1 inline-block size-1.5 rounded-full",
-                            t.dot,
-                            d.status === "active" && "animate-pulse-soft"
+                            t.dot
                           )}
                         />
                         {t.label}

@@ -9,10 +9,6 @@ export default function NotFound() {
       <Navbar />
       <main id="main" className="flex min-h-[70vh] items-center justify-center px-5 pt-24">
         <div className="matrix-panel relative isolate w-full max-w-xl p-10 text-center">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 -z-10 bg-dot-grid opacity-40 mask-fade-radial"
-          />
           <p className="matrix-label">
             404 / Page missing
           </p>
@@ -29,9 +25,6 @@ export default function NotFound() {
             </Button>
             <Button asChild variant="outline">
               <Link href="/docs">Read the docs</Link>
-            </Button>
-            <Button asChild variant="ghost">
-              <Link href="/download">Get started</Link>
             </Button>
           </div>
         </div>

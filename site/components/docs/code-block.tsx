@@ -25,7 +25,7 @@ export function CodeBlock({
 
   return (
     <div className="relative my-4 overflow-hidden rounded-lg border border-border bg-background/60">
-      <div className="flex items-center justify-between border-b border-border bg-card/40 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+      <div className="flex items-center justify-between border-b border-border bg-card/40 px-3 py-2 text-xs text-muted-foreground">
         <span>{lang}</span>
         <Button size="sm" variant="ghost" onClick={copy} aria-label="Copy code">
           {copied ? (

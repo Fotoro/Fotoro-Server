@@ -147,7 +147,7 @@ export function LoginForm() {
 
       <div className="relative flex items-center">
         <span className="h-px flex-1 bg-border" />
-        <span className="px-3 text-xs uppercase tracking-wider text-muted-foreground">
+        <span className="px-3 text-xs text-muted-foreground">
           Secure, self-hosted, private
         </span>
         <span className="h-px flex-1 bg-border" />

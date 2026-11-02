@@ -15,7 +15,7 @@ export function DashboardTopbar({ user, onLogout }: {
 
   return <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/95 px-5 backdrop-blur">
     <span className="matrix-label hidden sm:block">Your archive / Control room</span>
-    <Link href="/dashboard/library" className="inline-flex items-center gap-2 border-b border-[hsl(var(--brand))] pb-1 font-mono text-[11px] uppercase tracking-wider text-[hsl(var(--brand))] sm:ml-6">Open library <ArrowUpRight className="size-3" /></Link>
+    <Link href="/dashboard/library" className="inline-flex items-center gap-2 border-b border-border pb-1 text-sm text-foreground sm:ml-6">Open library <ArrowUpRight className="size-4" /></Link>
     <div className="ml-auto flex items-center gap-2">
       <div className="inline-flex items-center gap-2 border border-border bg-card py-1 pl-1 pr-3">
         {avatar ? <Image src={avatar} alt="" width={28} height={28} unoptimized className="size-7 object-cover" /> : <span className="inline-flex size-7 items-center justify-center bg-[hsl(var(--brand))] font-mono text-[10px] font-bold text-background">{initials}</span>}

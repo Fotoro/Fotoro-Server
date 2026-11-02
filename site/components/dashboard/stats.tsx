@@ -45,7 +45,7 @@ export function DashboardStats() {
           key={s.label}
           className="matrix-panel p-5"
         >
-          <div className="relative flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+          <div className="relative flex items-center gap-2 text-xs text-muted-foreground">
             <s.icon className="size-3.5 text-[hsl(var(--brand))]" />
             {s.label}
           </div>

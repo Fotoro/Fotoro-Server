@@ -9,6 +9,7 @@ export const metadata = publicMetadata(
   "Notes on Fotoro's local photo storage, phone backup and browsing architecture.",
   "/blog"
 );
+if (posts.length === 0) metadata.robots = { index: false, follow: true };
 
 export default function BlogPage() {
   return <PageShell><div className="container-tight pb-28">
@@ -17,6 +18,7 @@ export default function BlogPage() {
       <h1 className="mt-5 max-w-3xl text-5xl font-medium sm:text-7xl">Notes from the archive</h1>
       <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground">How the system handles originals, backups and access. Written and published with the Fotoro source.</p>
     </header>
+    {posts.length === 0 ? <div className="border-b border-border py-16"><h2 className="text-2xl font-medium">The first note is being written</h2><p className="mt-3 max-w-xl text-muted-foreground">The project owner publishes notes here when there is something concrete to share.</p></div> : null}
     <div className="divide-y divide-border">
       {posts.map((post) => <article key={post.slug} className="grid gap-4 py-10 md:grid-cols-[12rem_1fr_auto] md:gap-8">
         <div className="text-sm text-muted-foreground"><time dateTime={post.publishedAt}>{new Date(`${post.publishedAt}T12:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}</time><span className="mt-1 block">{post.readingMinutes} min read</span></div>

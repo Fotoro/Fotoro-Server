@@ -71,7 +71,7 @@ export default function DashboardPage() {
           animate={{ opacity: 1 }}
           className="flex items-center gap-2 text-sm"
         >
-          <span className="inline-block size-2 animate-pulse-soft rounded-full bg-foreground" />
+          <span className="inline-block size-2 rounded-full bg-foreground" />
           Loading dashboard…
         </motion.div>
       </div>

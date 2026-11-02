@@ -76,32 +76,6 @@
 }
 
 @layer components {
-  /* Dot matrix fields are CSS-native, so they stay sharp at every size. */
-  .bg-dot-grid {
-    background-image: radial-gradient(
-      hsl(var(--foreground) / 0.18) 1.5px,
-      transparent 1px
-    );
-    background-size: 15px 15px;
-  }
-
-  .bg-line-grid {
-    background-image:
-      linear-gradient(to right, hsl(var(--border) / 0.4) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--border) / 0.4) 1px, transparent 1px);
-    background-size: 56px 56px;
-  }
-
-  .mask-fade-bottom {
-    -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent);
-    mask-image: linear-gradient(to bottom, black 60%, transparent);
-  }
-
-  .mask-fade-radial {
-    -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%);
-    mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%);
-  }
-
   .text-balance {
     text-wrap: balance;
   }
