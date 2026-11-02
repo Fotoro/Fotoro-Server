@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { publicMetadata } from "@/lib/seo";
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { PageShell } from "@/components/site/page-shell";
 
 export const metadata: Metadata = publicMetadata("How it works", "From local media to a searchable, backed-up Fotoro timeline.", "/how-it-works");
@@ -22,11 +22,11 @@ const questions = [
 
 export default function HowItWorksPage() {
   return <PageShell><div className="container-tight pb-28">
-    <div className="grid gap-8 border-b border-border pb-14 lg:grid-cols-[1fr_0.55fr]"><div><p className="matrix-label">From source to screen</p><h1 className="mt-5 max-w-3xl text-balance text-5xl font-medium leading-[1.02] sm:text-7xl">A path for every original</h1></div><p className="self-end text-base leading-relaxed text-muted-foreground">Fotoro keeps ingest, storage, verification and browsing visible. The archive lives on the machine you choose.</p></div>
-    <div className="grid gap-px border-x border-b border-border bg-border md:grid-cols-2">{steps.map((step) => <section key={step.number} className="relative min-h-80 bg-card p-8 sm:p-10"><span className="matrix-label">Step {step.number}</span><ArrowDownRight className="absolute right-7 top-7 size-6 text-muted-foreground" strokeWidth={1.5} /><h2 className="relative mt-20 text-3xl font-medium">{step.title}</h2><p className="relative mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">{step.text}</p><p className="relative mt-8 border-t border-border pt-4 text-xs text-muted-foreground">{step.line}</p></section>)}</div>
-    <div className="matrix-paper mt-12 flex flex-wrap items-center justify-between gap-6 p-8"><p className="max-w-xl text-2xl font-medium">Start with a host you control. Add your phone when you are ready.</p><Link href="/download" className="inline-flex items-center gap-2 border-b border-background pb-1 text-sm font-medium">Get started <ArrowUpRight className="size-4" /></Link></div>
+    <div className="grid gap-8 border-b border-border pb-14 lg:grid-cols-[1fr_0.55fr]"><div><p className="text-xs tracking-[.15em] text-[hsl(var(--brand))]">FROM SOURCE TO SCREEN</p><h1 className="font-display mt-5 max-w-3xl text-balance text-6xl leading-[.92] sm:text-8xl">A path for every <em>original.</em></h1></div><p className="self-end text-base leading-relaxed text-muted-foreground">Fotoro keeps ingest, storage, verification and browsing visible. The archive lives on the machine you choose.</p></div>
+    <div className="relative mt-8 border-l border-border sm:ml-8">{steps.map((step) => <section key={step.number} className="relative grid gap-4 border-b border-border py-12 pl-8 sm:py-16 sm:pl-14 lg:grid-cols-[.7fr_1fr]"><span className="absolute -left-[5px] top-[3.5rem] size-[9px] rounded-full bg-[hsl(var(--brand))] sm:top-[4.5rem]" /><div><span className="font-display text-4xl italic text-[hsl(var(--brand))]">{step.number}</span><h2 className="font-display mt-6 text-4xl sm:text-5xl">{step.title}</h2></div><div className="self-end"><p className="max-w-lg text-base leading-8 text-muted-foreground">{step.text}</p><p className="mt-6 text-xs text-[hsl(var(--brand))]">{step.line}</p></div></section>)}</div>
+    <div className="mt-16 flex flex-wrap items-center justify-between gap-6 rounded-[1.5rem] bg-card p-8 sm:p-12"><p className="font-display max-w-xl text-4xl leading-tight sm:text-5xl">Start with a host you control. Add your phone when you are ready.</p><Link href="/download" className="inline-flex items-center gap-2 border-b border-foreground pb-1 text-sm font-medium">Get started <ArrowUpRight className="size-4" /></Link></div>
     <section className="mt-20 max-w-3xl" aria-labelledby="questions-heading">
-      <h2 id="questions-heading" className="text-3xl font-medium">Common questions</h2>
+      <h2 id="questions-heading" className="font-display text-5xl">Common questions</h2>
       <div className="mt-6 divide-y divide-border border-y border-border">{questions.map((item) => <div key={item.question} className="py-6"><h3 className="text-lg font-medium">{item.question}</h3><p className="mt-2 leading-relaxed text-muted-foreground">{item.answer}</p></div>)}</div>
     </section>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({

@@ -10,7 +10,7 @@ export function Hero() {
     <div className="container-tight relative flex min-h-[820px] flex-col justify-between pt-40 pb-10 sm:min-h-[760px] sm:pt-44 lg:min-h-[850px] lg:pt-48">
       <div className="max-w-4xl">
         <p className="text-xs tracking-[0.17em] text-[#DCCFC1]">A PRIVATE PHOTO ARCHIVE</p>
-        <h1 className="font-display mt-7 text-balance text-[clamp(5rem,12vw,10.8rem)] leading-[.82] tracking-[-.045em]">Your photos.<br /><span className="italic text-[#F0B79F]">On your server.</span></h1>
+        <h1 className="font-display mt-7 text-balance text-[clamp(4.1rem,12vw,10.8rem)] leading-[.86] tracking-[-.045em]">Your photos.<br /><span className="italic text-[#F0B79F]">On your server.</span></h1>
         <p className="mt-10 max-w-md text-lg leading-relaxed text-[#E1D8CF] sm:text-xl">Originals stay original. Verified, timelined, yours. A calmer place for everything you want to remember.</p>
         <div className="mt-9 flex flex-wrap items-center gap-4">
           <Link href="/download" className="inline-flex min-h-12 items-center gap-4 rounded-full bg-[#E07A5F] px-6 py-3 text-sm font-semibold text-[#1A1714] transition-[transform,background-color] hover:-translate-y-0.5 hover:bg-[#F0A48B] active:translate-y-0">Get started <ArrowUpRight className="size-4" /></Link>

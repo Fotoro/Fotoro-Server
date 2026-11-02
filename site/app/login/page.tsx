@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/site/logo";
 import { LoginForm } from "./login-form";
@@ -19,11 +20,11 @@ export default function LoginPage() {
         <Logo />
       </div>
 
-      <div className="grid w-full max-w-5xl overflow-hidden border border-border bg-card lg:grid-cols-2">
+      <div className="grid w-full max-w-5xl overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-[0_30px_100px_rgba(0,0,0,.12)] lg:grid-cols-2">
         <div className="p-7 sm:p-12">
           <div className="mb-6">
-            <p className="matrix-label">Your Fotoro account</p>
-            <h1 className="mt-5 text-4xl font-medium">
+            <p className="text-xs tracking-[.14em] text-[hsl(var(--brand))]">YOUR FOTORO ACCOUNT</p>
+            <h1 className="font-display mt-5 text-5xl leading-none">
               Open your archive
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -50,7 +51,7 @@ export default function LoginPage() {
           </p>
           <p className="mt-6 text-sm text-muted-foreground">New here? <Link href="/download" className="border-b border-[hsl(var(--brand))] pb-1 text-[hsl(var(--brand))]">Set up your Linux server</Link> first.</p>
         </div>
-        <div className="matrix-art hidden lg:block" aria-hidden="true"><div className="matrix-art__frame" /><p className="absolute bottom-8 left-8 z-10 text-sm">Your server holds the originals</p></div>
+        <div className="relative hidden min-h-[620px] lg:block"><Image src="/editorial/coast-memory.webp" alt="" fill sizes="50vw" className="object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#0F0E0C]/65 to-transparent" /><p className="font-display absolute bottom-9 left-9 max-w-sm text-4xl italic leading-tight text-[#F5F1EB]">Your server holds the originals.</p></div>
       </div>
     </main>
   );

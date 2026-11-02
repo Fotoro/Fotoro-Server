@@ -1,22 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Fotoro — keep the whole picture">
-  <defs>
-    <pattern id="paperDots" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#efe6d4" opacity=".16"/></pattern>
-    <pattern id="printDots" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="5" cy="5" r="2.4" fill="#121619" opacity=".6"/></pattern>
-    <pattern id="imageDots" width="10" height="10" patternUnits="userSpaceOnUse"><circle cx="5" cy="5" r="2.8" fill="#efe6d4" opacity=".82"/></pattern>
-  </defs>
-  <rect width="1200" height="630" fill="#121619"/>
-  <rect width="1200" height="630" fill="url(#paperDots)"/>
-  <line x1="60" y1="85" x2="1140" y2="85" stroke="#675f53"/>
-  <rect x="60" y="39" width="42" height="42" fill="#f58061"/>
-  <g fill="#121619"><circle cx="71" cy="50" r="3"/><circle cx="82" cy="50" r="3"/><circle cx="93" cy="50" r="3"/><circle cx="71" cy="61" r="3"/><circle cx="82" cy="61" r="4"/><circle cx="93" cy="61" r="3"/><circle cx="71" cy="72" r="3"/><circle cx="82" cy="72" r="3"/><circle cx="93" cy="72" r="3"/></g>
-  <text x="116" y="72" fill="#efe6d4" font-size="38" font-weight="700" font-family="Arial, sans-serif" letter-spacing="-2">fotoro<tspan fill="#f58061">.</tspan></text>
-  <text x="60" y="168" fill="#f58061" font-size="19" font-weight="700" font-family="monospace" letter-spacing="5">AN ARCHIVE ON YOUR TERMS</text>
-  <text x="55" y="300" fill="#efe6d4" font-size="100" font-weight="700" font-family="Arial, sans-serif" letter-spacing="-7">Keep the</text>
-  <text x="55" y="406" fill="#f58061" font-size="100" font-weight="700" font-family="Arial, sans-serif" letter-spacing="-7">whole picture.</text>
-  <text x="60" y="487" fill="#bbb4a6" font-size="24" font-family="Arial, sans-serif">Your photos and videos. Your own server.</text>
-  <line x1="60" y1="555" x2="1140" y2="555" stroke="#675f53"/>
-  <text x="60" y="590" fill="#bbb4a6" font-size="17" font-family="monospace" letter-spacing="2">IMPORT / PROTECT / EXPLORE</text>
-  <circle cx="1040" cy="310" r="175" fill="#f58061"/>
-  <circle cx="1040" cy="310" r="175" fill="url(#printDots)"/>
-  <g transform="translate(845 130) rotate(-11 120 175)"><rect x="0" y="0" width="240" height="350" fill="#121619" stroke="#efe6d4" stroke-width="3"/><rect x="24" y="32" width="192" height="255" fill="url(#imageDots)"/><text x="26" y="327" fill="#efe6d4" font-size="20" font-family="monospace">F / 001</text></g>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Fotoro — Your photos. On your server.">
+  <rect width="1200" height="630" fill="#0F0E0C"/>
+  <rect x="48" y="48" width="1104" height="534" rx="18" fill="#1C1A17"/>
+  <path d="M760 48h374a18 18 0 0 1 18 18v498a18 18 0 0 1-18 18H760z" fill="#3B352F"/>
+  <circle cx="1010" cy="232" r="150" fill="#D77358" opacity=".75"/>
+  <path d="M760 458c72-90 155-118 236-56 52 40 98 44 156 11v169H760z" fill="#201E1A"/>
+  <path d="M760 510c84-52 183-50 285 10 32 19 67 26 107 22v40H760z" fill="#161512"/>
+  <text x="88" y="117" fill="#F5F1EB" font-size="42" font-family="Georgia,serif">fotoro<tspan fill="#E07A5F">.</tspan></text>
+  <line x1="88" y1="155" x2="718" y2="155" stroke="#6E6259" opacity=".6"/>
+  <text x="88" y="264" fill="#F5F1EB" font-size="78" font-family="Georgia,serif">Your photos.</text>
+  <text x="88" y="350" fill="#EFB59E" font-style="italic" font-size="78" font-family="Georgia,serif">On your server.</text>
+  <text x="88" y="426" fill="#C5BAAF" font-size="24" font-family="Arial,sans-serif">Originals stay original. Verified, timelined, yours.</text>
+  <text x="88" y="537" fill="#A89F94" font-size="18" font-family="Arial,sans-serif">LINUX HOST  ·  ANDROID BACKUP  ·  WEB TIMELINE</text>
 </svg>

@@ -141,61 +141,15 @@
     background-color: hsl(var(--brand));
   }
 
-  .matrix-art {
-    position: relative;
-    isolation: isolate;
-    overflow: hidden;
-    min-height: 520px;
-    border: 1px solid hsl(var(--border));
-    background: hsl(210 12% 11%);
-  }
-
-  .matrix-art::before {
-    content: "";
-    position: absolute;
-    inset: -20%;
-    background-image: radial-gradient(hsl(var(--foreground) / 0.16) 2px, transparent 2.4px);
-    background-size: 14px 14px;
-    -webkit-mask-image: linear-gradient(to right, transparent, black);
-    mask-image: linear-gradient(to right, transparent, black);
-  }
-
-  .matrix-art::after {
-    content: "";
-    position: absolute;
-    width: 48px;
-    height: 100%;
-    right: 0;
-    top: 0;
-    background-color: hsl(var(--brand));
-    background-image: radial-gradient(hsl(var(--background) / 0.35) 1.5px, transparent 2px);
-    background-size: 12px 12px;
-  }
-
-  .matrix-art__frame {
-    position: absolute;
-    z-index: 1;
-    left: 18%;
-    top: 12%;
-    width: 56%;
-    aspect-ratio: 0.8;
-    border: 12px solid hsl(var(--foreground));
-    box-shadow: 0 0 0 1px hsl(var(--border));
-    background: hsl(var(--background));
-  }
-
-  .matrix-art__frame::before {
-    content: "";
-    position: absolute;
-    inset: 9%;
-    background-image: radial-gradient(hsl(var(--foreground) / 0.8) 2.2px, transparent 2.6px);
-    background-size: 9px 9px;
-    -webkit-mask-image: radial-gradient(ellipse at 50% 66%, black 23%, transparent 69%);
-    mask-image: radial-gradient(ellipse at 50% 66%, black 23%, transparent 69%);
-  }
-
   .dashboard-grid {
     background-color: hsl(var(--background));
+  }
+  .dashboard-grid h1 {
+    font-family: var(--font-display), Georgia, serif;
+    font-size: clamp(2rem, 3vw, 2.8rem);
+    font-weight: 400;
+    letter-spacing: -.025em;
+    line-height: 1.05;
   }
 }
 

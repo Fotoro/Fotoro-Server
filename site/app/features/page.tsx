@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { publicMetadata } from "@/lib/seo";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowUpRight, Database, HardDrive, Images, LockKeyhole, ScanSearch, SlidersHorizontal, Smartphone } from "lucide-react";
 import { PageShell } from "@/components/site/page-shell";
 
@@ -57,17 +58,16 @@ const groups = [
 
 export default function FeaturesPage() {
   return <PageShell><div className="container-tight pb-28">
-    <section className="grid gap-8 border-b border-border pb-14 lg:grid-cols-[1fr_0.6fr]">
-      <div><p className="matrix-label">What Fotoro does</p><h1 className="mt-5 max-w-3xl text-balance text-5xl font-medium leading-[1.02] sm:text-7xl">The whole route from phone to archive</h1></div>
-      <p className="self-end text-base leading-relaxed text-muted-foreground">Each original has a traceable path through transfer, storage, verification and browsing. These capabilities span the Linux server, web dashboard and Android app.</p>
+    <section className="grid overflow-hidden rounded-[1.5rem] border border-border bg-card lg:grid-cols-[1.05fr_.95fr]">
+      <div className="flex flex-col justify-between p-8 sm:p-12 lg:py-20"><p className="text-xs tracking-[.15em] text-[hsl(var(--brand))]">WHAT FOTORO DOES</p><div className="mt-16"><h1 className="font-display max-w-3xl text-balance text-6xl leading-[.9] sm:text-8xl">The whole route from phone <em>to archive.</em></h1><p className="mt-8 max-w-xl text-base leading-relaxed text-muted-foreground">Each original has a traceable path through transfer, storage, verification and browsing. A library built around the photographs, and the person keeping them.</p></div></div>
+      <div className="relative min-h-[390px]"><Image src="/editorial/lake-walk.webp" alt="Two friends on a walk beside a lake" fill priority sizes="(max-width: 1024px) 100vw, 48vw" className="object-cover object-center" /></div>
     </section>
-    <nav aria-label="Feature groups" className="flex flex-wrap gap-2 border-b border-border py-5">{groups.map((group) => <Link key={group.id} href={`#${group.id}`} className="border border-border px-3 py-2 text-sm transition-colors hover:border-foreground">{group.name}</Link>)}</nav>
-    <div>{groups.map((group) => <section id={group.id} key={group.id} className="scroll-mt-24 grid gap-8 border-b border-border py-16 lg:grid-cols-[0.78fr_1.22fr]">
-      <div className="relative min-h-[250px] border border-border bg-card p-7">
-        <span className="matrix-label">{group.index}</span>
-        <group.icon className="mt-10 size-8 text-muted-foreground" strokeWidth={1.5} />
-        <h2 className="relative mt-6 max-w-sm text-3xl font-medium">{group.name}</h2>
-        <p className="relative mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">{group.summary}</p>
+    <nav aria-label="Feature groups" className="mt-14 flex flex-wrap gap-2 border-b border-border py-5">{groups.map((group) => <Link key={group.id} href={`#${group.id}`} className="rounded-full border border-border px-4 py-2 text-sm transition-colors hover:border-foreground">{group.name}</Link>)}</nav>
+    <div>{groups.map((group) => <section id={group.id} key={group.id} className="scroll-mt-24 grid gap-8 border-b border-border py-16 sm:py-20 lg:grid-cols-[0.78fr_1.22fr]">
+      <div>
+        <span className="font-display text-4xl italic text-[hsl(var(--brand))]">{group.index}</span>
+        <h2 className="font-display mt-8 max-w-sm text-5xl leading-[.96] sm:text-6xl">{group.name}</h2>
+        <p className="mt-6 max-w-sm text-sm leading-7 text-muted-foreground">{group.summary}</p>
       </div>
       <div className="divide-y divide-border border-t border-border">{group.features.map(([title, detail], index) => <div key={title} className="grid gap-2 py-5 sm:grid-cols-[2rem_12rem_1fr]"><span className="font-mono text-xs text-muted-foreground">{String(index + 1).padStart(2, "0")}</span><h3 className="text-sm font-medium">{title}</h3><p className="text-sm leading-relaxed text-muted-foreground">{detail}</p></div>)}</div>
     </section>)}</div>

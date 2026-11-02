@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ArrowUpRight, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { FotoroUser } from "@/lib/fotoro-session";
+import { ThemeToggle } from "@/components/site/theme-toggle";
 
 export function DashboardTopbar({ user, onLogout }: {
   user?: FotoroUser | { name?: string | null; email?: string | null; avatar_url?: string; picture?: string };
@@ -14,11 +15,12 @@ export function DashboardTopbar({ user, onLogout }: {
   const avatar = user && "avatar_url" in user ? user.avatar_url ?? user.picture : user && "picture" in user ? user.picture : undefined;
 
   return <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/95 px-5 backdrop-blur">
-    <span className="matrix-label hidden sm:block">Your archive / Control room</span>
+    <span className="hidden font-display text-xl italic text-muted-foreground sm:block">Your archive</span>
     <Link href="/dashboard/library" className="inline-flex items-center gap-2 border-b border-border pb-1 text-sm text-foreground sm:ml-6">Open library <ArrowUpRight className="size-4" /></Link>
     <div className="ml-auto flex items-center gap-2">
-      <div className="inline-flex items-center gap-2 border border-border bg-card py-1 pl-1 pr-3">
-        {avatar ? <Image src={avatar} alt="" width={28} height={28} unoptimized className="size-7 object-cover" /> : <span className="inline-flex size-7 items-center justify-center bg-[hsl(var(--brand))] font-mono text-[10px] font-bold text-background">{initials}</span>}
+      <ThemeToggle />
+      <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-3">
+        {avatar ? <Image src={avatar} alt="" width={28} height={28} unoptimized className="size-7 rounded-full object-cover" /> : <span className="inline-flex size-7 items-center justify-center rounded-full bg-[hsl(var(--brand))] font-mono text-[10px] font-bold text-background">{initials}</span>}
         <span className="hidden max-w-40 truncate text-xs text-muted-foreground sm:inline">{user?.name ?? user?.email ?? "User"}</span>
       </div>
       {onLogout ? <Button size="icon" variant="ghost" aria-label="Sign out" onClick={onLogout}><LogOut className="size-4" /></Button> : null}
