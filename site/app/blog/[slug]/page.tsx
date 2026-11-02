@@ -51,12 +51,12 @@ export default async function BlogPostPage({ params }: BlogParams) {
     <Link href="/blog" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Journal</Link>
     <header className="mt-10 border-b border-border pb-10">
       <p className="text-sm text-muted-foreground"><time dateTime={post.publishedAt}>{new Date(`${post.publishedAt}T12:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}</time> · {post.readingMinutes} min read</p>
-      <h1 className="mt-5 text-balance text-4xl font-medium leading-tight sm:text-6xl">{post.title}</h1>
+      <h1 className="font-display mt-5 text-balance text-6xl leading-[.95] sm:text-8xl">{post.title}</h1>
       <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">{post.summary}</p>
     </header>
-    <div className="max-w-2xl space-y-12 pt-10">
+    <div className="mx-auto max-w-2xl space-y-16 pt-14">
       {post.sections.map((section) => <section key={section.heading}>
-        <h2 className="text-2xl font-medium">{section.heading}</h2>
+        <h2 className="font-display text-4xl">{section.heading}</h2>
         <div className="mt-4 space-y-4 text-base leading-8 text-muted-foreground">{section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
       </section>)}
     </div>

@@ -5,8 +5,8 @@ import { FOOTER_LINKS, SITE } from "@/lib/constants";
 
 export function Footer() {
   return (
-    <footer className="relative mt-20 border-t border-border bg-card/70">
-      <div className="container-tight pt-16 pb-10">
+    <footer className="relative border-t border-border bg-card/70">
+      <div className="container-tight pt-20 pb-10">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div className="space-y-4">
             <Logo />

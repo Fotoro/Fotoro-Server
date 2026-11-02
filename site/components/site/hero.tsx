@@ -1,36 +1,26 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 
 export function Hero() {
-  return <section className="container-tight pt-24 sm:pt-28">
-    <div className="flex items-center justify-between border-b border-border pb-4">
-      <span className="matrix-label">Fotoro / private photo archive</span>
-      <span className="hidden text-xs text-muted-foreground sm:block">Linux host · Android backup · Web timeline</span>
-    </div>
-    <div className="grid min-h-[600px] lg:grid-cols-[1.05fr_0.95fr]">
-      <div className="flex flex-col justify-center py-14 pr-0 lg:py-20 lg:pr-16">
-        <h1 className="max-w-3xl text-balance text-[clamp(3.5rem,6.5vw,6.5rem)] font-medium leading-[0.98] tracking-[-0.045em]">
-          Your photos,<br />on your server
-        </h1>
-        <p className="mt-8 max-w-md text-base leading-relaxed text-muted-foreground sm:text-lg">
-          Back up originals from your phone, see which copies are verified, and browse the years from a web timeline. The files stay on a Linux host you choose.
-        </p>
-        <div className="mt-9 flex flex-wrap gap-3">
-          <Link href="/download" className="inline-flex items-center gap-3 bg-[hsl(var(--brand))] px-5 py-3 text-sm font-medium text-background transition-colors hover:bg-foreground">
-            Get started <ArrowUpRight className="size-4" />
-          </Link>
-          <Link href="/features" className="inline-flex items-center gap-3 border border-border px-5 py-3 text-sm font-medium transition-colors hover:border-foreground">
-            See what it does
-          </Link>
+  return <section className="relative isolate min-h-[820px] overflow-hidden bg-[#171512] text-[#F5F1EB] sm:min-h-[760px] lg:min-h-[850px]">
+    <Image src="/editorial/coast-memory.webp" alt="A quiet coast at dusk, with one person looking out to sea" fill priority sizes="100vw" className="object-cover object-[57%_center] opacity-65" />
+    <div className="absolute inset-0 bg-gradient-to-r from-[#100F0D]/95 via-[#100F0D]/68 to-[#100F0D]/5" />
+    <div className="absolute inset-0 bg-gradient-to-t from-[#100F0D]/90 via-transparent to-[#100F0D]/15" />
+    <div className="container-tight relative flex min-h-[820px] flex-col justify-between pt-40 pb-10 sm:min-h-[760px] sm:pt-44 lg:min-h-[850px] lg:pt-48">
+      <div className="max-w-4xl">
+        <p className="text-xs tracking-[0.17em] text-[#DCCFC1]">A PRIVATE PHOTO ARCHIVE</p>
+        <h1 className="font-display mt-7 text-balance text-[clamp(5rem,12vw,10.8rem)] leading-[.82] tracking-[-.045em]">Your photos.<br /><span className="italic text-[#F0B79F]">On your server.</span></h1>
+        <p className="mt-10 max-w-md text-lg leading-relaxed text-[#E1D8CF] sm:text-xl">Originals stay original. Verified, timelined, yours. A calmer place for everything you want to remember.</p>
+        <div className="mt-9 flex flex-wrap items-center gap-4">
+          <Link href="/download" className="inline-flex min-h-12 items-center gap-4 rounded-full bg-[#E07A5F] px-6 py-3 text-sm font-semibold text-[#1A1714] transition-[transform,background-color] hover:-translate-y-0.5 hover:bg-[#F0A48B] active:translate-y-0">Get started <ArrowUpRight className="size-4" /></Link>
+          <Link href="#archive-preview" className="inline-flex min-h-12 items-center gap-3 rounded-full border border-[#F5F1EB]/45 px-6 py-3 text-sm font-medium transition-colors hover:bg-[#F5F1EB]/10">See the archive <ArrowDownRight className="size-4" /></Link>
         </div>
       </div>
-      <div className="matrix-art my-5 lg:my-8" role="img" aria-label="Abstract halftone print of an archival photo against an orange circle">
-        <div className="matrix-art__frame" />
-        <div className="absolute bottom-5 left-5 z-10 border border-foreground/50 bg-background/90 px-3 py-2 text-xs">An original stays an original</div>
+      <div className="mt-20 flex flex-wrap items-end justify-between gap-6 border-t border-white/25 pt-5 text-xs text-[#DCCFC1]">
+        <span>Linux host · Android backup · Web timeline</span>
+        <span className="font-display text-xl italic text-[#F5F1EB]">Made for the moments that stay.</span>
       </div>
-    </div>
-    <div className="grid border-y border-border py-5 text-sm text-muted-foreground sm:grid-cols-3">
-      <span className="py-2">Originals checked by hash</span><span className="py-2">Backup copies tracked separately</span><span className="py-2">Capture-date timeline</span>
     </div>
   </section>;
 }

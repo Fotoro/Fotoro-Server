@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { SITE } from "@/lib/constants";
 import { CookieBanner } from "@/components/site/cookie-banner";
@@ -16,11 +16,18 @@ const mono = Geist_Mono({
   display: "swap",
 });
 
+const display = Instrument_Serif({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+});
+
 export const viewport: Viewport = {
-  themeColor: "#121619",
+  themeColor: "#0F0E0C",
   width: "device-width",
   initialScale: 1,
-  colorScheme: "dark",
+  colorScheme: "dark light",
 };
 
 export const metadata: Metadata = {
@@ -89,7 +96,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable} dark`}>
+    <html lang="en" className={`${sans.variable} ${mono.variable} ${display.variable} dark`} suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('fotoro-theme');if(t==='light'){document.documentElement.dataset.theme='light';document.documentElement.classList.remove('dark')}}catch(e){}` }} /></head>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <a
           href="#main"

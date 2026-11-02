@@ -13,6 +13,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Logo } from "@/components/site/logo";
+import { ThemeToggle } from "@/components/site/theme-toggle";
 import { NAV_LINKS, SITE } from "@/lib/constants";
 import { isAuthenticated } from "@/lib/fotoro-session";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,7 @@ export function Navbar() {
 
   return (
     <header
-      className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background"
+      className="fixed inset-x-0 top-0 z-50 border-b border-border/55 bg-background/90 backdrop-blur-xl"
     >
       <div className="container-tight flex h-16 items-center justify-between gap-6">
         <div className="flex items-center gap-8">
@@ -54,6 +55,7 @@ export function Navbar() {
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
+          <ThemeToggle />
           <Button
             asChild
             variant="ghost"
@@ -91,6 +93,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2 md:hidden">
+          <ThemeToggle />
           {loggedIn ? (
             <Button asChild size="sm" variant="ghost">
               <Link href="/dashboard">Dashboard</Link>
