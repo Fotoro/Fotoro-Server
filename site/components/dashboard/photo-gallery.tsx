@@ -14,7 +14,8 @@ const EAGER_COUNT = 8;
 const GRID_GAP = 12;
 const HEADER_HEIGHT = 40;
 
-type TimelineItem = { photo: GalleryPhoto; index: number };
+type PhotoItem = { photo: GalleryPhoto; index: number };
+type TimelineItem = PhotoItem & { span: number };
 type TimelineRow = {
   key: string;
   top: number;
@@ -61,7 +62,7 @@ const LazyThumb = React.memo(function LazyThumb({ photo, index }: { photo: Galle
 });
 
 function timelineGroups(photos: GalleryPhoto[]) {
-  const groups = new Map<string, TimelineItem[]>();
+  const groups = new Map<string, PhotoItem[]>();
   photos.forEach((photo, index) => {
     const value = photo.taken_at ?? photo.added_at ?? "";
     const month = /^\d{4}-\d{2}/.test(value) ? value.slice(0, 7) : "Unknown date";
@@ -80,14 +81,17 @@ function buildTimelineRows(photos: GalleryPhoto[], columns: number, width: numbe
   for (const [month, items] of timelineGroups(photos)) {
     rows.push({ key: `month:${month}`, top, height: HEADER_HEIGHT, month });
     top += HEADER_HEIGHT;
-    for (let start = 0; start < items.length; start += columns) {
+    const rowSlots = columns >= 3 ? columns - 1 : columns;
+    for (let start = 0; start < items.length; start += rowSlots) {
       const rhythm = [1, 0.82, 1.16, 0.92, 1.04][rowNumber % 5];
       const height = tileHeight * rhythm;
+      const spans = Array.from({ length: rowSlots }, () => 1);
+      if (columns >= 3) spans[rowNumber % rowSlots] = 2;
       rows.push({
         key: `row:${month}:${start}`,
         top,
         height: height + GRID_GAP,
-        items: items.slice(start, start + columns),
+        items: items.slice(start, start + rowSlots).map((item, index) => ({ ...item, span: spans[index] })),
       });
       top += height + GRID_GAP;
       rowNumber++;
@@ -425,12 +429,12 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
                   </h3>
                 ) : (
                   <div key={row.key} className="absolute inset-x-0 grid gap-2" style={{ top: row.top, gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
-                    {row.items?.map(({ photo, index }) => (
+                    {row.items?.map(({ photo, index, span }) => (
                       <button
                         key={photo.id}
                         type="button"
                         className="gallery-image-button group relative overflow-hidden bg-muted/30 transition-[border-color,box-shadow]"
-                        style={{ height: row.height - GRID_GAP }}
+                        style={{ height: row.height - GRID_GAP, gridColumn: `span ${span}` }}
                         onClick={() => setSelected(photo)}
                         aria-label={`Open ${photo.caption || photo.category || "media"}`}
                       >
