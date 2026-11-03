@@ -14,9 +14,16 @@ import {
 } from "@/components/ui/sheet";
 import { Logo } from "@/components/site/logo";
 import { ThemeToggle } from "@/components/site/theme-toggle";
-import { NAV_LINKS, SITE } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
 import { isAuthenticated } from "@/lib/fotoro-session";
 import { cn } from "@/lib/utils";
+
+const links = [
+  { href: "/#product", label: "Product" },
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#self-hosting", label: "Self-hosting" },
+  { href: "/docs", label: "Documentation" },
+];
 
 export function Navbar() {
   const [open, setOpen] = React.useState(false);
@@ -36,8 +43,8 @@ export function Navbar() {
       <div className="container-tight flex h-16 items-center justify-between gap-6">
         <div className="flex items-center gap-8">
           <Logo />
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
-            {NAV_LINKS.map((link) => (
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
+            {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -54,7 +61,7 @@ export function Navbar() {
           </nav>
         </div>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           <ThemeToggle />
           <Button
             asChild
@@ -69,7 +76,7 @@ export function Navbar() {
               aria-label="GitHub repository"
             >
               <Github className="size-4" />
-              <span className="hidden lg:inline">Source</span>
+              <span className="hidden xl:inline">GitHub</span>
             </Link>
           </Button>
           {loggedIn ? (
@@ -92,7 +99,7 @@ export function Navbar() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex items-center gap-2 lg:hidden">
           <ThemeToggle />
           {loggedIn ? (
             <Button asChild size="sm" variant="ghost">
@@ -116,7 +123,7 @@ export function Navbar() {
                 </SheetTitle>
               </SheetHeader>
               <nav className="mt-8 flex flex-col gap-1" aria-label="Mobile">
-                {NAV_LINKS.map((link) => (
+                {links.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}

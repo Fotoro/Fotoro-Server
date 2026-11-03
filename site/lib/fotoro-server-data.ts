@@ -70,6 +70,9 @@ interface ApiMediaRow {
   width?: number;
   height?: number;
   safe_to_delete: boolean;
+  checksum_verified?: boolean;
+  verified_storage_copies?: number;
+  status?: string;
 }
 
 interface ApiMediaPage {
@@ -167,6 +170,9 @@ function mapApiMedia(row: ApiMediaRow): GalleryPhoto {
     width: row.width,
     height: row.height,
     safe_to_delete: row.safe_to_delete,
+    checksum_verified: row.checksum_verified,
+    verified_storage_copies: row.verified_storage_copies,
+    status: row.status,
   };
 }
 

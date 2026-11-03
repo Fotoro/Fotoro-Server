@@ -64,19 +64,15 @@ export default function LibraryPage() {
       <motion.main
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="container-tight flex min-h-0 w-full flex-1 flex-col px-5 py-8"
+        className="archive-page container-tight flex min-h-0 w-full flex-1 flex-col px-5 py-8"
       >
-        <div className="mb-4 flex shrink-0 flex-wrap items-end justify-between gap-3">
+        <div className="archive-heading-row mb-4 flex shrink-0 flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="matrix-label">
-              Media library
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Your media</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Your timeline is loaded from your Fotoro server.
-            </p>
+            <p className="matrix-label">MY ARCHIVE</p>
+            <h1 className="font-display">The days we keep.</h1>
+            <p className="archive-subtitle">Original media, arranged by the time it was captured.</p>
           </div>
-          <ConnectivityBadge state={connState} onRefresh={refresh} />
+          <div className="flex flex-col items-end gap-3"><div className="archive-current"><strong>{node?.node_name ?? "Your server"}</strong>PRIVATE ARCHIVE · {online === "online" ? "CONNECTED" : online.toUpperCase()}</div><ConnectivityBadge state={connState} onRefresh={refresh} /></div>
         </div>
 
         <div className="grid min-h-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">

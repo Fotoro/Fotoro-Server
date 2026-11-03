@@ -176,7 +176,8 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
         </div>
       </header>
 
-      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden" onClick={(event) => event.stopPropagation()}>
+      <div className="viewer-main" onClick={(event) => event.stopPropagation()}>
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
         <button type="button" onClick={onPrevious} disabled={position <= 1} aria-label="Previous image" className="absolute left-2 z-20 rounded-full border border-white/20 bg-black/60 p-2.5 hover:bg-black/80 disabled:opacity-25 sm:left-5"><ChevronLeft className="size-6" /></button>
         <div ref={stageRef} className="relative size-full overflow-hidden bg-black/60" style={{ touchAction: isPhoto ? "none" : "auto" }} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onDoubleClick={() => { if (zoom > 1) { setZoom(1); setOffset({ x: 0, y: 0 }); } else changeZoom(2); }}>
           {isVideo ? (
@@ -203,14 +204,23 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
         </div>
         <button type="button" onClick={onNext} disabled={!hasNext} aria-label="Next image" className="absolute right-2 z-20 rounded-full border border-white/20 bg-black/60 p-2.5 hover:bg-black/80 disabled:opacity-25 sm:right-5"><ChevronRight className="size-6" /></button>
       </div>
-
-      <footer className="flex min-h-12 flex-wrap items-center gap-x-5 gap-y-1 border-t border-white/15 px-4 py-2 font-mono text-[11px] text-white/60" onClick={(event) => event.stopPropagation()}>
-        <span>{isVideo ? "Video" : isDocument ? "Document" : originalReady ? "Original resolution" : detailReady ? "Display detail" : "Display preview"}</span>
-        {photo.width && photo.height ? <span>{photo.width} × {photo.height}</span> : null}
-        {photo.fileSize ? <span>{formatBytes(photo.fileSize)}</span> : null}
-        {photo.taken_at ? <span>{new Date(photo.taken_at).toLocaleString()}</span> : null}
-        {photo.safe_to_delete !== undefined ? <span>{photo.safe_to_delete ? "Two verified copies" : "Keep source copy"}</span> : null}
-        <span className="ml-auto hidden sm:inline">← → browse · scroll or pinch to zoom · drag to pan</span>
+      <aside className="viewer-record" aria-label="File record">
+        <div className="viewer-record__heading"><span>FILE RECORD</span><span>{position.toString().padStart(2, "0")} / {total.toLocaleString()}</span></div>
+        <h2>{title}</h2>
+        <dl>
+          <div><dt>Captured</dt><dd>{photo.taken_at ? new Date(photo.taken_at).toLocaleString() : "Not recorded"}</dd></div>
+          <div><dt>Original</dt><dd>{photo.width && photo.height ? `${photo.width} × ${photo.height}` : "Dimensions unavailable"}</dd></div>
+          <div><dt>File</dt><dd>{photo.fileSize ? formatBytes(photo.fileSize) : "Size unavailable"}{photo.mimeType ? ` · ${photo.mimeType}` : ""}</dd></div>
+          <div><dt>Integrity</dt><dd><i className={photo.checksum_verified ? "is-verified" : ""} />{photo.checksum_verified === undefined ? "Not reported" : photo.checksum_verified ? "Verified" : "Not verified"}</dd></div>
+          <div><dt>Verified copies</dt><dd>{photo.verified_storage_copies === undefined ? "Not reported" : photo.verified_storage_copies}</dd></div>
+          <div><dt>Source device</dt><dd>{photo.safe_to_delete === undefined ? "State unavailable" : photo.safe_to_delete ? "Safe to remove" : "Keep source copy"}</dd></div>
+        </dl>
+        <p>Preservation state supplied by your Fotoro host.</p>
+      </aside>
+      </div>
+      <footer className="viewer-help" onClick={(event) => event.stopPropagation()}>
+        <span>{isVideo ? "VIDEO" : isDocument ? "DOCUMENT" : originalReady ? "ORIGINAL RESOLUTION" : detailReady ? "DISPLAY DETAIL" : "DISPLAY PREVIEW"}</span>
+        <span>← → browse · scroll or pinch to zoom · drag to pan</span>
       </footer>
     </div>
   );

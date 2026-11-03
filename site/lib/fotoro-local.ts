@@ -32,6 +32,9 @@ export interface GalleryPhoto {
   media_kind?: string;
   mimeType?: string;
   safe_to_delete?: boolean;
+  checksum_verified?: boolean;
+  verified_storage_copies?: number;
+  status?: string;
 }
 
 export interface NodePublic {

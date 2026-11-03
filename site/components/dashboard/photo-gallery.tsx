@@ -11,8 +11,8 @@ import { PhotoViewer } from "@/components/dashboard/photo-viewer";
 
 const PAGE_SIZE = 100;
 const EAGER_COUNT = 8;
-const GRID_GAP = 8;
-const HEADER_HEIGHT = 36;
+const GRID_GAP = 12;
+const HEADER_HEIGHT = 40;
 
 type TimelineItem = { photo: GalleryPhoto; index: number };
 type TimelineRow = {
@@ -76,17 +76,21 @@ function buildTimelineRows(photos: GalleryPhoto[], columns: number, width: numbe
   const rows: TimelineRow[] = [];
   const tileHeight = Math.max(60, (width - GRID_GAP * (columns - 1)) / columns);
   let top = 0;
+  let rowNumber = 0;
   for (const [month, items] of timelineGroups(photos)) {
     rows.push({ key: `month:${month}`, top, height: HEADER_HEIGHT, month });
     top += HEADER_HEIGHT;
     for (let start = 0; start < items.length; start += columns) {
+      const rhythm = [1, 0.82, 1.16, 0.92, 1.04][rowNumber % 5];
+      const height = tileHeight * rhythm;
       rows.push({
         key: `row:${month}:${start}`,
         top,
-        height: tileHeight + GRID_GAP,
+        height: height + GRID_GAP,
         items: items.slice(start, start + columns),
       });
-      top += tileHeight + GRID_GAP;
+      top += height + GRID_GAP;
+      rowNumber++;
     }
   }
   return { rows, height: top };
@@ -158,7 +162,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
     };
   }, [token]);
 
-  const columns = Math.max(3, Math.min(8, Math.floor((viewportWidth + GRID_GAP) / 120)));
+  const columns = Math.max(2, Math.min(6, Math.floor((viewportWidth + GRID_GAP) / 170)));
   const timeline = React.useMemo(
     () => buildTimelineRows(photos, columns, viewportWidth),
     [photos, columns, viewportWidth]
@@ -350,7 +354,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
-      <form onSubmit={handleSearch} className="flex shrink-0 gap-2">
+      <form onSubmit={handleSearch} className="archive-gallery-form flex shrink-0 gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -393,7 +397,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
       <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-border bg-card/50">
         <div
           ref={scrollRef}
-          className="h-[min(70vh,720px)] overflow-y-auto overscroll-contain p-3"
+          className="archive-gallery-scroll h-[min(70vh,720px)] overflow-y-auto overscroll-contain p-3"
           onScroll={(event) => {
             latestScrollTopRef.current = event.currentTarget.scrollTop;
             if (scrollFrameRef.current !== null) return;
@@ -404,7 +408,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
           }}
         >
           {loading && photos.length === 0 ? (
-            <div role="status" aria-label="Loading photos" className="grid grid-cols-3 gap-2 sm:grid-cols-5">{Array.from({ length: 15 }, (_, index) => <div key={index} className="aspect-square rounded-md bg-muted/60" />)}</div>
+            <div role="status" aria-label="Loading photos" className="grid grid-cols-2 gap-3 sm:grid-cols-4">{Array.from({ length: 12 }, (_, index) => <div key={index} className={`${index % 4 === 1 ? "aspect-[.82]" : "aspect-square"} bg-muted/60`} />)}</div>
           ) : photos.length === 0 ? (
             <div className="flex h-full min-h-[240px] flex-col items-center justify-center text-center">
               <ImageIcon className="mb-3 size-8 text-muted-foreground" />
@@ -416,7 +420,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
             <>
               <div className="relative" style={{ height: timeline.height }}>
                 {visibleRows.map((row) => row.month ? (
-                  <h3 key={row.key} className="font-display absolute inset-x-0 px-1 text-xl text-foreground" style={{ top: row.top, height: row.height }}>
+                  <h3 key={row.key} className="month-heading font-display absolute inset-x-0 px-1 text-xl text-foreground" style={{ top: row.top, height: row.height }}>
                     {row.month === "Unknown date" ? row.month : new Date(`${row.month}-01T00:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
                   </h3>
                 ) : (
@@ -425,11 +429,16 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
                       <button
                         key={photo.id}
                         type="button"
-                        className="group aspect-square overflow-hidden rounded-md border border-border bg-muted/30 transition-[border-color,box-shadow] hover:border-foreground/30 hover:shadow-lg"
+                        className="gallery-image-button group relative overflow-hidden bg-muted/30 transition-[border-color,box-shadow]"
+                        style={{ height: row.height - GRID_GAP }}
                         onClick={() => setSelected(photo)}
                         aria-label={`Open ${photo.caption || photo.category || "media"}`}
                       >
                         <LazyThumb photo={photo} index={index} />
+                        <span className="pointer-events-none absolute inset-x-0 bottom-0 flex translate-y-2 items-end justify-between bg-gradient-to-t from-black/70 via-black/20 to-transparent px-2 pb-2 pt-7 text-left font-mono text-[8px] tracking-wide text-white opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                          <span>{photo.taken_at ? new Date(photo.taken_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "DATE NOT RECORDED"}</span>
+                          <span>{photo.media_kind === "video" ? "VIDEO" : photo.safe_to_delete ? "SAFE TO REMOVE FROM SOURCE" : "KEEP SOURCE COPY"}</span>
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -446,7 +455,7 @@ export const PhotoGallery = React.forwardRef<PhotoGalleryHandle>(function PhotoG
                 </p>
               ) : null}
 
-              <p className="py-3 text-center text-[11px] text-muted-foreground">
+              <p className="archive-gallery-foot py-3 text-center text-[11px] text-muted-foreground">
                 {photos.length.toLocaleString()} of {total.toLocaleString()} items · your server
               </p>
             </>
