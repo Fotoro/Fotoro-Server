@@ -15,7 +15,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 }
 
 export default function DocsPage() {
-  return <PageShell><div className="container-tight pb-28">
+  return <PageShell mainClassName="docs-shell"><div className="docs-page container-tight pb-28">
     <div className="relative border-b border-border pb-14"><p className="matrix-label">System documentation</p><h1 className="relative mt-5 text-5xl font-medium sm:text-7xl">How Fotoro works</h1><p className="relative mt-5 max-w-2xl text-muted-foreground">The Linux server, web dashboard and Android app share one media catalogue and a device pairing flow.</p></div>
     <div className="mt-12 flex gap-10"><DocsSidebar /><article className="min-w-0 max-w-3xl flex-1">
       <Section id="overview" title="Overview">
@@ -32,7 +32,7 @@ go build -o fotoro .
         <p><code>./fotoro app</code> starts the desktop UI when its Qt dependencies are available. <code>./fotoro nodesync</code> re-publishes your node record if the route changes.</p>
       </Section>
       <Section id="first-sync" title="Add your first media">
-        <p>Use <code>./fotoro ingest /path/to/photos</code> to process an existing folder. The resumable upload API is available for testing a device offload flow. The Android client is not released yet.</p>
+        <p>Use <code>./fotoro ingest /path/to/photos</code> to process an existing folder, or pair the Android app with your linked host to send phone media. Upload sessions can resume from the saved byte offset after an interruption.</p>
       </Section>
       <Section id="backups" title="Backup copies">
         <p>Configure a separate backup location during setup. The server records verified storage copies and reports whether an item has both its primary and backup file available. A single copy is an offload, but is not marked safe to delete from the source device.</p>

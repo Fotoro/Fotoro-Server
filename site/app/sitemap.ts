@@ -8,6 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/about",
     "/features",
     "/how-it-works",
+    "/security",
     "/download",
     "/docs",
   ] as const;

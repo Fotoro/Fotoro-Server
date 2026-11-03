@@ -3,157 +3,90 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, Github, LayoutDashboard, Menu } from "lucide-react";
+import { ArrowRight, ArrowUpRight, LayoutDashboard, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Logo } from "@/components/site/logo";
 import { SITE } from "@/lib/constants";
 import { isAuthenticated } from "@/lib/fotoro-session";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { href: "/#product", label: "Product" },
-  { href: "/#how-it-works", label: "How it works" },
-  { href: "/#archive", label: "Archive" },
-  { href: "/#self-hosting", label: "Self-hosting" },
-  { href: "/docs", label: "Docs" },
+  { href: "/features", label: "Product" },
+  { href: "/#how-it-works", label: "How it works", section: "how-it-works" },
+  { href: "/#archive", label: "Archive", section: "archive" },
+  { href: "/security", label: "Security" },
+  { href: "/blog", label: "Journal", journal: true },
+  { href: "/docs", label: "Documentation" },
 ];
 
 export function Navbar() {
   const [open, setOpen] = React.useState(false);
   const [loggedIn, setLoggedIn] = React.useState(false);
+  const [scrolled, setScrolled] = React.useState(false);
+  const [activeSection, setActiveSection] = React.useState("");
   const pathname = usePathname();
 
   React.useEffect(() => setOpen(false), [pathname]);
+  React.useEffect(() => setLoggedIn(isAuthenticated()), [pathname]);
 
   React.useEffect(() => {
-    setLoggedIn(isAuthenticated());
+    const update = () => setScrolled(window.scrollY > 28);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
+
+  React.useEffect(() => {
+    if (pathname !== "/") { setActiveSection(""); return; }
+    const sections = ["how-it-works", "archive"]
+      .map((id) => document.getElementById(id))
+      .filter((element): element is HTMLElement => element instanceof HTMLElement);
+    if (!sections.length) return;
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible) setActiveSection(visible.target.id);
+    }, { rootMargin: "-82px 0px -64% 0px", threshold: [0, .15, .35, .6] });
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
   }, [pathname]);
 
-  return (
-    <header
-      className="site-nav fixed inset-x-0 top-0 z-50 border-b border-border/55 bg-background/90 backdrop-blur-xl"
-    >
-      <div className="container-tight flex h-16 items-center justify-between gap-6">
-        <div className="flex items-center gap-8">
-          <Logo />
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  "px-3 py-1.5 text-sm transition-colors",
-                  pathname === link.href || pathname.startsWith(`${link.href}/`)
-                    ? "text-[hsl(var(--brand))]"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
+  const isActive = (link: (typeof links)[number]) => {
+    if (link.section) return pathname === "/" && activeSection === link.section;
+    const hrefPath = link.href.split("#")[0];
+    return Boolean(hrefPath && (pathname === hrefPath || (hrefPath !== "/" && pathname.startsWith(`${hrefPath}/`))));
+  };
 
-        <div className="hidden items-center gap-2 lg:flex">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Link
-              href={SITE.github}
-              target="_blank"
-              rel="noreferrer noopener"
-              aria-label="GitHub repository"
-            >
-              <Github className="size-4" />
-              <span className="hidden xl:inline">GitHub</span>
-            </Link>
-          </Button>
-          {loggedIn ? (
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/dashboard">
-                <LayoutDashboard className="size-4" />
-                Dashboard
-              </Link>
-            </Button>
-          ) : (
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/login">Sign in</Link>
-            </Button>
-          )}
-          <Button asChild size="sm" className="site-nav__cta group">
-            <Link href="/download">
-              Get started
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-2 lg:hidden">
-          {loggedIn ? (
-            <Button asChild size="sm" variant="ghost">
-              <Link href="/dashboard">Dashboard</Link>
-            </Button>
-          ) : (
-            <Button asChild size="sm" variant="ghost">
-              <Link href="/login">Sign in</Link>
-            </Button>
-          )}
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="icon" aria-label="Open menu">
-                <Menu className="size-4" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="border-l border-border">
-              <SheetHeader>
-                <SheetTitle>
-                  <Logo />
-                </SheetTitle>
-              </SheetHeader>
-              <nav className="mt-8 flex flex-col gap-1" aria-label="Mobile">
-                {links.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                      "rounded-md px-3 py-2 text-sm transition-colors",
-                      pathname === link.href
-                        ? "bg-accent text-foreground"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </nav>
-              <div className="mt-6 flex flex-col gap-2">
-                <Button asChild>
-                  <Link href="/download">Get started</Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link
-                    href={SITE.github}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                  >
-                    <Github className="size-4" /> View on GitHub
-                  </Link>
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
+  return <header className={cn("site-nav fixed inset-x-0 top-0 z-50", (scrolled || pathname !== "/") && "is-glass")}>
+    <div className="container-tight site-nav__inner">
+      <Logo className="site-nav__logo" />
+      <nav className="site-nav__links" aria-label="Main navigation">
+        {links.map((link, index) => <Link key={link.href} href={link.href} aria-current={isActive(link) ? (link.section ? "location" : "page") : undefined} className={cn("site-nav__link", isActive(link) && "is-active", link.journal && "site-nav__link--journal")}>
+          {link.journal ? <span className="site-nav__journal-index">05</span> : null}
+          <span>{link.label}</span>
+          {link.journal ? <ArrowUpRight size={11} aria-hidden="true" /> : null}
+          <span className="site-nav__link-order" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+        </Link>)}
+      </nav>
+      <div className="site-nav__actions">
+        {loggedIn ? <Button asChild variant="ghost" size="sm" className="site-nav__signin"><Link href="/dashboard"><LayoutDashboard size={14} /> Dashboard</Link></Button> : <Button asChild variant="ghost" size="sm" className="site-nav__signin"><Link href="/login">Sign in</Link></Button>}
+        <Button asChild size="sm" className="site-nav__cta"><Link href="/download">Get started <ArrowRight size={14} /></Link></Button>
       </div>
-    </header>
-  );
+      <div className="site-nav__mobile">
+        {loggedIn ? <Link href="/dashboard" className="site-nav__mobile-account">Dashboard</Link> : <Link href="/login" className="site-nav__mobile-account">Sign in</Link>}
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild><Button variant="ghost" size="icon" aria-label="Open navigation"><Menu size={19} /></Button></SheetTrigger>
+          <SheetContent side="right" className="site-nav__sheet">
+            <SheetHeader><SheetTitle><Logo /></SheetTitle></SheetHeader>
+            <nav className="site-nav__mobile-links" aria-label="Mobile navigation">
+              {links.map((link, index) => <Link key={link.href} href={link.href} onClick={() => setOpen(false)} aria-current={isActive(link) ? (link.section ? "location" : "page") : undefined} className={cn(isActive(link) && "is-active", link.journal && "is-journal")}>
+                <span className="site-nav__mobile-number">{String(index + 1).padStart(2, "0")}</span><span>{link.label}</span>{link.journal ? <ArrowUpRight size={14} /> : <ArrowRight size={14} />}
+              </Link>)}
+            </nav>
+            <div className="site-nav__sheet-foot"><p>ANDROID / LINUX / PRIVATE ACCESS</p><Button asChild className="site-nav__cta"><Link href="/download">Get started <ArrowRight size={14} /></Link></Button><Link href={SITE.github} target="_blank" rel="noreferrer noopener" className="site-nav__github">Open-source on GitHub <ArrowUpRight size={12} /></Link></div>
+          </SheetContent>
+        </Sheet>
+      </div>
+    </div>
+  </header>;
 }

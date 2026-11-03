@@ -14,14 +14,14 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main id="main" className="relative isolate flex min-h-screen flex-col items-center justify-center px-5 py-10">
+    <main id="main" className="login-page">
 
-      <div className="absolute left-5 top-5 sm:left-8 sm:top-8">
+      <div className="login-logo">
         <Logo />
       </div>
 
-      <div className="grid w-full max-w-5xl overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-[0_30px_100px_rgba(0,0,0,.12)] lg:grid-cols-2">
-        <div className="p-7 sm:p-12">
+      <div className="login-layout">
+        <div className="login-panel">
           <div className="mb-6">
             <p className="text-xs tracking-[.14em] text-[hsl(var(--brand))]">YOUR FOTORO ACCOUNT</p>
             <h1 className="font-display mt-5 text-5xl leading-none">
@@ -51,7 +51,7 @@ export default function LoginPage() {
           </p>
           <p className="mt-6 text-sm text-muted-foreground">New here? <Link href="/download" className="border-b border-[hsl(var(--brand))] pb-1 text-[hsl(var(--brand))]">Set up your Linux server</Link> first.</p>
         </div>
-        <div className="relative hidden min-h-[620px] lg:block"><Image src="/editorial/coast-memory.webp" alt="" fill sizes="50vw" className="object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#0F0E0C]/65 to-transparent" /><p className="font-display absolute bottom-9 left-9 max-w-sm text-4xl italic leading-tight text-[#F5F1EB]">Your server holds the originals.</p></div>
+        <div className="login-image"><Image src="/images/editorial/hero-ocean-path.jpg" alt="A figure walking a path toward the coastline" fill sizes="50vw" className="object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#0F0E0C]/65 to-transparent" /><p className="font-display absolute bottom-9 left-9 max-w-sm text-4xl italic leading-tight text-[#F5F1EB]">Your server holds the originals.</p></div>
       </div>
     </main>
   );

@@ -148,14 +148,13 @@ export function LoginForm() {
       <div className="relative flex items-center">
         <span className="h-px flex-1 bg-border" />
         <span className="px-3 text-xs text-muted-foreground">
-          Secure, self-hosted, private
+          ACCOUNT SIGN-IN / LINKED HOST
         </span>
         <span className="h-px flex-1 bg-border" />
       </div>
 
       <p className="text-center text-xs leading-relaxed text-muted-foreground">
-        Sign in with the same Google account you use on your Fotoro server.
-        Your photos never leave your devices — Fotoro runs entirely on your hardware.
+        Sign in with the Google account linked to your Fotoro host. Original media is sent to the server you choose; the website handles account sign-in and authenticated access to that host.
       </p>
     </div>
   );

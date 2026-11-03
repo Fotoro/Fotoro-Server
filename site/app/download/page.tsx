@@ -15,8 +15,8 @@ const commands = [
 
 export default function DownloadPage() {
   return (
-    <PageShell>
-      <div className="container-tight pb-28">
+    <PageShell mainClassName="download-shell">
+      <div className="download-page container-tight pb-28">
         <div className="grid gap-8 border-b border-border pb-14 lg:grid-cols-[1fr_0.6fr]"><div><p className="text-xs tracking-[.15em] text-[hsl(var(--brand))]">START HERE / LINUX HOST</p><h1 className="font-display mt-5 text-balance text-6xl leading-[.92] sm:text-8xl">Give your archive <em>a home.</em></h1></div><p className="self-end text-base leading-relaxed text-muted-foreground">Build from source, run setup, and connect your account. You need Go, a storage location, and Tailscale for private remote access.</p></div>
         <div className="mt-12 grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
           <div className="rounded-[1.5rem] border border-border bg-card p-8"><span className="text-xs tracking-[.12em] text-[hsl(var(--brand))]">WHAT YOU NEED / 01</span><h2 className="font-display mt-14 text-4xl leading-tight">One Linux machine. A place for the originals.</h2><p className="mt-5 text-sm leading-relaxed text-muted-foreground">Add a separate backup drive to make verified second copies. Setup opens the web sign in, connects Tailscale, and links this host to your account.</p></div>

@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Newsreader, Literata, DM_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import "./experience.css";
+import "./public-pages.css";
+import "./experience-pages.css";
 import { SITE } from "@/lib/constants";
 import { CookieBanner } from "@/components/site/cookie-banner";
 

@@ -9,6 +9,7 @@ export type BlogPost = {
   publishedAt: string;
   updatedAt: string;
   readingMinutes: number;
+  category?: "archive" | "building" | "ownership" | "photography" | "releases";
   sections: { heading: string; paragraphs: string[] }[];
 };
 

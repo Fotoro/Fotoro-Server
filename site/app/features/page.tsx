@@ -57,20 +57,20 @@ const groups = [
 ];
 
 export default function FeaturesPage() {
-  return <PageShell><div className="container-tight pb-28">
-    <section className="grid overflow-hidden rounded-[1.5rem] border border-border bg-card lg:grid-cols-[1.05fr_.95fr]">
-      <div className="flex flex-col justify-between p-8 sm:p-12 lg:py-20"><p className="text-xs tracking-[.15em] text-[hsl(var(--brand))]">WHAT FOTORO DOES</p><div className="mt-16"><h1 className="font-display max-w-3xl text-balance text-6xl leading-[.9] sm:text-8xl">The whole route from phone <em>to archive.</em></h1><p className="mt-8 max-w-xl text-base leading-relaxed text-muted-foreground">Each original has a traceable path through transfer, storage, verification and browsing. A library built around the photographs, and the person keeping them.</p></div></div>
-      <div className="relative min-h-[390px]"><Image src="/editorial/lake-walk.webp" alt="Two friends on a walk beside a lake" fill priority sizes="(max-width: 1024px) 100vw, 48vw" className="object-cover object-center" /></div>
-    </section>
-    <nav aria-label="Feature groups" className="mt-14 flex flex-wrap gap-2 border-b border-border py-5">{groups.map((group) => <Link key={group.id} href={`#${group.id}`} className="rounded-full border border-border px-4 py-2 text-sm transition-colors hover:border-foreground">{group.name}</Link>)}</nav>
-    <div>{groups.map((group) => <section id={group.id} key={group.id} className="scroll-mt-24 grid gap-8 border-b border-border py-16 sm:py-20 lg:grid-cols-[0.78fr_1.22fr]">
-      <div>
-        <span className="font-display text-4xl italic text-[hsl(var(--brand))]">{group.index}</span>
-        <h2 className="font-display mt-8 max-w-sm text-5xl leading-[.96] sm:text-6xl">{group.name}</h2>
-        <p className="mt-6 max-w-sm text-sm leading-7 text-muted-foreground">{group.summary}</p>
-      </div>
-      <div className="divide-y divide-border border-t border-border">{group.features.map(([title, detail], index) => <div key={title} className="grid gap-2 py-5 sm:grid-cols-[2rem_12rem_1fr]"><span className="font-mono text-xs text-muted-foreground">{String(index + 1).padStart(2, "0")}</span><h3 className="text-sm font-medium">{title}</h3><p className="text-sm leading-relaxed text-muted-foreground">{detail}</p></div>)}</div>
-    </section>)}</div>
-    <div className="matrix-paper mt-16 grid gap-6 p-8 sm:grid-cols-[1fr_auto] sm:p-10"><div><p className="text-sm">Android v0.1</p><h2 className="mt-3 text-2xl font-medium">Backup from your phone</h2><p className="mt-3 max-w-2xl text-sm leading-relaxed">The Android app sends photos and videos in the background, shows transfer progress, and lets you stop and resume uploads.</p></div><Link href="https://github.com/Fotoro/Fotoro-Android/releases/tag/v0.1" className="inline-flex items-center gap-2 self-end border-b border-background pb-1 text-sm font-medium">View Android release <ArrowUpRight className="size-4" /></Link></div>
+  return <PageShell mainClassName="features-shell"><div className="features-page">
+    <header className="features-hero">
+      <div className="features-hero__copy"><p className="eyebrow">PRODUCT / CAPTURE THROUGH PRESERVATION</p><h1 className="font-display">The whole route<br />from phone <em>to archive.</em></h1><p>Every original has a path through transfer, storage, verification and browsing. Here are the pieces Fotoro ships today.</p><Link href="/how-it-works" className="text-link">How the system fits together <ArrowUpRight size={15} /></Link></div>
+      <figure className="features-hero__image"><Image src="/images/editorial/last-light.jpg" alt="People at the shoreline in the last light of day" fill priority sizes="(max-width: 760px) 100vw, 50vw" quality={82} /><figcaption><span>STORAGE / BROWSING</span><span>FOTORO / 01</span></figcaption></figure>
+      <span className="features-hero__index">07 SYSTEM AREAS</span>
+    </header>
+    <nav aria-label="Feature groups" className="feature-index">{groups.map((group) => <Link key={group.id} href={`#${group.id}`}><span>{group.index}</span>{group.name}</Link>)}</nav>
+    <div className="feature-sections">{groups.map((group, groupIndex) => {
+      const Icon = group.icon;
+      return <section id={group.id} key={group.id} className={`feature-section${groupIndex === 1 ? " feature-section--cobalt" : ""}`}>
+        <header className="feature-section__intro"><span className="feature-section__index">{group.index} / 07</span><Icon size={19} strokeWidth={1.3} aria-hidden="true" /><h2 className="font-heading">{group.name}</h2><p>{group.summary}</p></header>
+        <div className="feature-records">{group.features.map(([title, detail], index) => <article key={title} className="feature-record"><span>{String(index + 1).padStart(2, "0")}</span><h3>{title}</h3><p>{detail}</p></article>)}</div>
+      </section>;
+    })}</div>
+    <aside className="feature-release"><div><span>ANDROID / V0.1</span><h2 className="font-display">A way home<br /><em>for the phone library.</em></h2><p>The Android app sends photos and videos in the background, shows transfer progress, and lets you stop or resume uploads.</p></div><Link href="https://github.com/Fotoro/Fotoro-Android/releases/tag/v0.1">View Android release <ArrowUpRight size={15} /></Link></aside>
   </div></PageShell>;
 }

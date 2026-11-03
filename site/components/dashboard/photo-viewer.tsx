@@ -162,23 +162,23 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
 
   return (
     <div role="dialog" aria-modal="true" aria-label={`${title}, item ${position} of ${total}`} className="fixed inset-0 z-[60] flex flex-col bg-[#0F0E0C] text-white" onClick={onClose}>
-      <header className="flex min-h-14 items-center justify-between gap-3 border-b border-white/15 px-3 sm:px-5" onClick={(event) => event.stopPropagation()}>
+      <header className="viewer-header glass-material flex min-h-14 items-center justify-between gap-3 border-b border-white/15 px-3 sm:px-5" onClick={(event) => event.stopPropagation()}>
         <div className="min-w-0"><p className="truncate text-sm font-medium">{title}</p><p className="font-mono text-[11px] text-white/55">{position.toLocaleString()} / {total.toLocaleString()}</p></div>
-        <div className="flex items-center gap-1">
+        <div className="viewer-toolbar glass-material">
           {isPhoto ? <>
-            <button type="button" onClick={() => changeZoom(1 / 1.25)} aria-label="Zoom out" className="rounded p-2 hover:bg-white/10"><Minus className="size-5" /></button>
-            <span className="w-12 text-center font-mono text-xs text-white/70">{Math.round(zoom * 100)}%</span>
-            <button type="button" onClick={() => changeZoom(1.25)} aria-label="Zoom in" className="rounded p-2 hover:bg-white/10"><Plus className="size-5" /></button>
-            <button type="button" onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }); }} aria-label="Fit image" className="rounded p-2 hover:bg-white/10"><Maximize2 className="size-5" /></button>
+            <button type="button" onClick={() => changeZoom(1 / 1.25)} aria-label="Zoom out" className="viewer-toolbar__button"><Minus className="size-5" /></button>
+            <span className="viewer-zoom">{Math.round(zoom * 100)}%</span>
+            <button type="button" onClick={() => changeZoom(1.25)} aria-label="Zoom in" className="viewer-toolbar__button"><Plus className="size-5" /></button>
+            <button type="button" onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }); }} aria-label="Fit image" className="viewer-toolbar__button"><Maximize2 className="size-5" /></button>
           </> : null}
-          {original ? <a href={original} target="_blank" rel="noreferrer" referrerPolicy="no-referrer" aria-label="Open original" className="rounded p-2 hover:bg-white/10"><ExternalLink className="size-5" /></a> : null}
-          <button ref={closeRef} type="button" onClick={onClose} aria-label="Close viewer" className="rounded p-2 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><X className="size-5" /></button>
+          {original ? <a href={original} target="_blank" rel="noreferrer" referrerPolicy="no-referrer" aria-label="Open original" className="viewer-toolbar__button"><ExternalLink className="size-5" /></a> : null}
+          <button ref={closeRef} type="button" onClick={onClose} aria-label="Close viewer" className="viewer-toolbar__button"><X className="size-5" /></button>
         </div>
       </header>
 
       <div className="viewer-main" onClick={(event) => event.stopPropagation()}>
       <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-        <button type="button" onClick={onPrevious} disabled={position <= 1} aria-label="Previous image" className="absolute left-2 z-20 rounded-full border border-white/20 bg-black/60 p-2.5 hover:bg-black/80 disabled:opacity-25 sm:left-5"><ChevronLeft className="size-6" /></button>
+        <button type="button" onClick={onPrevious} disabled={position <= 1} aria-label="Previous image" className="viewer-arrow absolute left-2 z-20 disabled:opacity-25 sm:left-5"><ChevronLeft className="size-6" /></button>
         <div ref={stageRef} className="relative size-full overflow-hidden bg-black/60" style={{ touchAction: isPhoto ? "none" : "auto" }} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onDoubleClick={() => { if (zoom > 1) { setZoom(1); setOffset({ x: 0, y: 0 }); } else changeZoom(2); }}>
           {isVideo ? (
             <video key={photo.id} src={original} controls preload="metadata" className="size-full object-contain" />
@@ -202,7 +202,7 @@ export function PhotoViewer({ photo, previous, next, position, total, hasNext, o
             </div>
           )}
         </div>
-        <button type="button" onClick={onNext} disabled={!hasNext} aria-label="Next image" className="absolute right-2 z-20 rounded-full border border-white/20 bg-black/60 p-2.5 hover:bg-black/80 disabled:opacity-25 sm:right-5"><ChevronRight className="size-6" /></button>
+        <button type="button" onClick={onNext} disabled={!hasNext} aria-label="Next image" className="viewer-arrow absolute right-2 z-20 disabled:opacity-25 sm:right-5"><ChevronRight className="size-6" /></button>
       </div>
       <aside className="viewer-record" aria-label="File record">
         <div className="viewer-record__heading"><span>FILE RECORD</span><span>{position.toString().padStart(2, "0")} / {total.toLocaleString()}</span></div>
