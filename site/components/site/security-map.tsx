@@ -43,7 +43,7 @@ export function SecurityMap() {
         <p className="security-account-note"><KeyRound size={12} /> ACCOUNT &amp; NODE LINKING / separate from the media path</p>
       </div>
     </div>
-    <div className="security-detail" aria-live="polite">
+    <div key={item.id} className="security-detail" aria-live="polite">
       <div className="security-detail__heading"><span>SELECTED SYSTEM / {item.index}</span><span><Icon size={14} /> {item.label}</span></div>
       <h3>{item.label}</h3>
       <div className="security-detail__columns"><div><span>WHAT IT HANDLES</span><p>{item.handles}</p></div><div><span>BOUNDARY</span><p>{item.not}</p></div></div>

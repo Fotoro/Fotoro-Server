@@ -52,7 +52,6 @@ export function HomeStory() {
         <figure className="archive-composition__wide"><Image src="/images/editorial/mountain-light.jpg" alt="Late sunlight breaking through cloud above a mountain range" fill sizes="(max-width:760px) 100vw, 55vw" quality={82} /><figcaption><span>LAND / AFTER THE RAIN</span><span>EXAMPLE PHOTOGRAPH</span></figcaption></figure>
         <figure className="archive-composition__portrait"><Image src="/images/editorial/last-light.jpg" alt="People as silhouettes on a beach at the last light of day" fill sizes="(max-width:760px) 45vw, 24vw" quality={82} /><figcaption><span>AT THE WATERLINE</span></figcaption></figure>
         <figure className="archive-composition__print"><Image src="/images/editorial/printed-memories.jpg" alt="A camera resting on an open book beside printed photographs" fill sizes="(max-width:760px) 52vw, 28vw" quality={82} /><figcaption><span>PRINT / 03</span></figcaption></figure>
-        <p className="archive-composition__note"><span>EDITORIAL STUDY / 001</span><br />These are selected examples. The private archive loads only media from your host.</p>
       </div>
     </section>
 

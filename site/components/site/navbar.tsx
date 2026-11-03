@@ -62,10 +62,9 @@ export function Navbar() {
       <Logo className="site-nav__logo" />
       <nav className="site-nav__links" aria-label="Main navigation">
         {links.map((link, index) => <Link key={link.href} href={link.href} aria-current={isActive(link) ? (link.section ? "location" : "page") : undefined} className={cn("site-nav__link", isActive(link) && "is-active", link.journal && "site-nav__link--journal")}>
-          {link.journal ? <span className="site-nav__journal-index">05</span> : null}
           <span>{link.label}</span>
           {link.journal ? <ArrowUpRight size={11} aria-hidden="true" /> : null}
-          <span className="site-nav__link-order" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+          {!link.journal ? <span className="site-nav__link-order" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span> : null}
         </Link>)}
       </nav>
       <div className="site-nav__actions">
@@ -80,7 +79,7 @@ export function Navbar() {
             <SheetHeader><SheetTitle><Logo /></SheetTitle></SheetHeader>
             <nav className="site-nav__mobile-links" aria-label="Mobile navigation">
               {links.map((link, index) => <Link key={link.href} href={link.href} onClick={() => setOpen(false)} aria-current={isActive(link) ? (link.section ? "location" : "page") : undefined} className={cn(isActive(link) && "is-active", link.journal && "is-journal")}>
-                <span className="site-nav__mobile-number">{String(index + 1).padStart(2, "0")}</span><span>{link.label}</span>{link.journal ? <ArrowUpRight size={14} /> : <ArrowRight size={14} />}
+                {!link.journal ? <span className="site-nav__mobile-number">{String(index + 1).padStart(2, "0")}</span> : <span aria-hidden="true" />}<span>{link.label}</span>{link.journal ? <ArrowUpRight size={14} /> : <ArrowRight size={14} />}
               </Link>)}
             </nav>
             <div className="site-nav__sheet-foot"><p>ANDROID / LINUX / PRIVATE ACCESS</p><Button asChild className="site-nav__cta"><Link href="/download">Get started <ArrowRight size={14} /></Link></Button><Link href={SITE.github} target="_blank" rel="noreferrer noopener" className="site-nav__github">Open-source on GitHub <ArrowUpRight size={12} /></Link></div>
