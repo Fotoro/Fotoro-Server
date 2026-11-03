@@ -1,31 +1,40 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { Newsreader, Literata, DM_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { SITE } from "@/lib/constants";
 import { CookieBanner } from "@/components/site/cookie-banner";
 
-const sans = Geist({
+const sans = DM_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
 });
 
-const mono = Geist_Mono({
+const mono = IBM_Plex_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
   display: "swap",
 });
 
-const display = Instrument_Serif({
+const display = Newsreader({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: "400",
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
+const heading = Literata({
+  variable: "--font-heading",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
   style: ["normal", "italic"],
   display: "swap",
 });
 
 export const viewport: Viewport = {
-  themeColor: "#0F0E0C",
+  themeColor: "#0B0A09",
   width: "device-width",
   initialScale: 1,
   colorScheme: "dark light",
@@ -97,7 +106,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable} ${display.variable} dark`} suppressHydrationWarning>
+    <html lang="en" className={`${sans.variable} ${mono.variable} ${display.variable} ${heading.variable} dark`} suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('fotoro-theme');if(t==='light'){document.documentElement.dataset.theme='light';document.documentElement.classList.remove('dark')}}catch(e){}` }} /></head>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <a

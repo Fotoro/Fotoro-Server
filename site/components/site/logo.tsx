@@ -19,13 +19,13 @@ export function Logo({
       )}
       aria-label="Fotoro home"
     >
-      <svg className="size-8 text-[hsl(var(--brand))]" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <path d="M4.5 4.5h23v23h-23z" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M20.5 9.5h-9v13m0-6.5h7" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
-        <path d="M23.5 23.5h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <svg className="size-7 text-[hsl(var(--brand))]" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M3 9V3h6M23 3h6v6M29 23v6h-6M9 29H3v-6" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M11 22V10h10" stroke="currentColor" strokeWidth="1.5" />
+        <circle cx="22.5" cy="22.5" r="1.5" fill="currentColor" />
       </svg>
       {showWord ? (
-        <span className="font-display text-[27px] leading-none tracking-[-0.04em]">fotoro<span className="text-[hsl(var(--brand))]">.</span></span>
+        <span className="font-display text-[28px] leading-none tracking-[-0.055em]">fotoro<span className="text-[hsl(var(--brand))]">.</span></span>
       ) : null}
     </Link>
   );

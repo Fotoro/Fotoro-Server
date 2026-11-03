@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Fotoro — Your photos. On your server.">
-  <rect width="1200" height="630" fill="#0F0E0C"/>
-  <rect x="48" y="48" width="1104" height="534" rx="18" fill="#1C1A17"/>
-  <path d="M760 48h374a18 18 0 0 1 18 18v498a18 18 0 0 1-18 18H760z" fill="#3B352F"/>
-  <circle cx="1010" cy="232" r="150" fill="#D77358" opacity=".75"/>
-  <path d="M760 458c72-90 155-118 236-56 52 40 98 44 156 11v169H760z" fill="#201E1A"/>
-  <path d="M760 510c84-52 183-50 285 10 32 19 67 26 107 22v40H760z" fill="#161512"/>
-  <text x="88" y="117" fill="#F5F1EB" font-size="42" font-family="Georgia,serif">fotoro<tspan fill="#E07A5F">.</tspan></text>
-  <line x1="88" y1="155" x2="718" y2="155" stroke="#6E6259" opacity=".6"/>
-  <text x="88" y="264" fill="#F5F1EB" font-size="78" font-family="Georgia,serif">Your photos.</text>
-  <text x="88" y="350" fill="#EFB59E" font-style="italic" font-size="78" font-family="Georgia,serif">On your server.</text>
-  <text x="88" y="426" fill="#C5BAAF" font-size="24" font-family="Arial,sans-serif">Originals stay original. Verified, timelined, yours.</text>
-  <text x="88" y="537" fill="#A89F94" font-size="18" font-family="Arial,sans-serif">LINUX HOST  ·  ANDROID BACKUP  ·  WEB TIMELINE</text>
+  <rect width="1200" height="630" fill="#3157DA"/>
+  <path d="M0 464h1200v166H0z" fill="#0B0A09"/>
+  <path d="M812 78h275v348H812z" fill="#F2F1ED" transform="rotate(3 949 252)"/>
+  <path d="M830 94h239v303H830z" fill="#1A292D" transform="rotate(3 949 245)"/>
+  <path d="M830 306c74-95 137-104 239-39v130H830z" fill="#A66B3F" transform="rotate(3 949 245)"/>
+  <circle cx="1010" cy="177" r="49" fill="#E1AE68"/>
+  <path d="M840 365c70-51 131-55 230-2v46H840z" fill="#17282A"/>
+  <path d="M100 88h34v34M183 88h34v34M217 171v34h-34M134 205h-34v-34" fill="none" stroke="#F2F1ED" stroke-width="2"/>
+  <text x="100" y="282" fill="#FFFFFF" font-size="98" letter-spacing="-6" font-family="Georgia,serif">Your photos.</text>
+  <text x="100" y="381" fill="#DDE5FF" font-size="98" letter-spacing="-6" font-family="Georgia,serif" font-style="italic">On your server.</text>
+  <text x="102" y="525" fill="#F2F1ED" font-size="16" letter-spacing="2" font-family="monospace">ANDROID / LINUX HOST / PRIVATE ARCHIVE</text>
+  <text x="102" y="574" fill="#FFFFFF" font-size="38" letter-spacing="-2" font-family="Georgia,serif">fotoro.</text>
 </svg>
