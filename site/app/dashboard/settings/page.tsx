@@ -18,18 +18,21 @@ type Diagnostics = {
 export default function SettingsPage() {
   const router = useRouter();
   const [user, setUser] = React.useState<FotoroUser | null>(null);
-  const { token, endpoint, online } = useServerData();
+  const { token, endpoint, online, vaultConfigured, vaultLocked, unlockVault, refresh: refreshNode } = useServerData();
   const [schedule, setSchedule] = React.useState<Schedule | null>(null);
   const [diagnostics, setDiagnostics] = React.useState<Diagnostics | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [recoveryInput, setRecoveryInput] = React.useState("");
+  const [vaultBusy, setVaultBusy] = React.useState(false);
+  const [vaultError, setVaultError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!getStoredUser()) router.replace("/login?callbackUrl=/dashboard/settings");
     else setUser(getStoredUser());
   }, [router]);
 
-  const refresh = React.useCallback(async () => {
+  const refreshSettings = React.useCallback(async () => {
     if (!token || online !== "online") return;
     const headers = { Authorization: `Bearer ${token}` };
     try {
@@ -46,7 +49,7 @@ export default function SettingsPage() {
     }
   }, [token, endpoint, online]);
 
-  React.useEffect(() => { void refresh(); }, [refresh]);
+  React.useEffect(() => { void refreshSettings(); }, [refreshSettings]);
   React.useEffect(() => {
     if (online === "offline") { setSchedule(null); setDiagnostics(null); }
   }, [online]);
@@ -61,11 +64,25 @@ export default function SettingsPage() {
         body: JSON.stringify({ enabled: !schedule.enabled }),
       });
       if (!response.ok) throw new Error("Could not save the schedule");
-      await refresh();
+      await refreshSettings();
+      await refreshNode(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not save the schedule");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function unlockExistingVault() {
+    setVaultBusy(true);
+    setVaultError(null);
+    try {
+      await unlockVault(recoveryInput);
+      setRecoveryInput("");
+    } catch (cause) {
+      setVaultError(cause instanceof Error ? cause.message : "Could not unlock the endpoint vault");
+    } finally {
+      setVaultBusy(false);
     }
   }
 
@@ -92,6 +109,27 @@ export default function SettingsPage() {
       <dl className="matrix-panel mt-8 divide-y divide-border">
         {rows.map(([label, value]) => <div key={label} className="flex flex-wrap justify-between gap-3 px-5 py-4 text-sm"><dt className="text-muted-foreground">{label}</dt><dd className="font-mono text-xs">{value}</dd></div>)}
       </dl>
+      <section className="matrix-panel mt-8 p-5" aria-labelledby="endpoint-vault-title">
+        <p className="matrix-label">Account / connection privacy</p>
+        <h2 id="endpoint-vault-title" className="mt-2 text-lg font-semibold">Tailscale endpoint vault</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Your Linux host encrypts its Tailscale route before sending it to Fotoro. Supabase stores only that encrypted envelope;
+          the recovery key stays on the host and is never stored in your account. Run <code>./fotoro endpoint-key</code> on the host,
+          then enter that key on each signed-in device. This protects the route from a Supabase database reader. The website handles
+          the route while relaying requests, and the host still requires an authenticated account or paired-device token.
+        </p>
+        {vaultError ? <p role="alert" className="mt-4 text-sm text-destructive-foreground">{vaultError}</p> : null}
+        {!vaultConfigured ? <p className="mt-4 text-sm text-muted-foreground">
+          No encrypted route is registered yet. On the Linux host, run <code>./fotoro endpoint-key</code>, then <code>./fotoro nodesync</code>.
+        </p> : vaultLocked ? <form className="mt-5 flex flex-col gap-3 sm:flex-row" onSubmit={(event) => { event.preventDefault(); void unlockExistingVault(); }}>
+          <input type="password" aria-label="Endpoint recovery key" autoComplete="off" spellCheck={false} value={recoveryInput}
+            onChange={(event) => setRecoveryInput(event.target.value)} placeholder="Paste the 43-character recovery key"
+            className="min-w-0 flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm" />
+          <button type="submit" disabled={vaultBusy || recoveryInput.length < 40}
+            className="rounded-full border border-border px-4 py-2 text-sm disabled:opacity-50">{vaultBusy ? "Unlocking…" : "Unlock this device"}</button>
+        </form> : <p className="mt-4 text-sm text-emerald-700">Route unlocked in this browser session. Enter the same key on your other devices.</p>}
+        {vaultConfigured ? <p className="mt-3 text-xs text-muted-foreground">The key stays in memory for this browser session. Keep it in your password manager to use it on another device.</p> : null}
+      </section>
       <button type="button" onClick={() => void toggleSchedule()} disabled={!schedule || saving || online !== "online"}
         className="mt-6 rounded-md border border-border px-4 py-2 text-sm disabled:opacity-50">
         {saving ? "Saving…" : schedule?.enabled ? "Disable scheduled processing" : "Enable scheduled processing"}

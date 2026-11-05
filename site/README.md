@@ -4,7 +4,7 @@
 
 ## Identity and routes
 
-Google sign-in establishes a Supabase session. The site resolves the signed-in user's `nodes` record, which identifies the host endpoint. The host checks the owner identity again on protected requests. The `/api/fotoro/...` route is an authenticated fallback proxy for the browser; `/api/v1/...` exposes compatible device routes. The pairing route creates a short-lived invitation on the linked host, and the phone redeems it for its own restricted token.
+Google sign-in establishes a Supabase session. The Linux host creates a random 256-bit AES-GCM key and encrypts its Tailscale route locally before syncing. The key is stored in the host's local SQLite database, whose database and WAL files are restricted to mode `0600`; `./fotoro endpoint-key` prints the same recovery key for the owner to enter on each signed-in browser. Supabase receives only the encrypted envelope and never receives that key. The browser decrypts the route in memory. The authenticated `/api/fotoro/...` fallback relay receives the unlocked route in an HTTP-only cookie so it can reach the host; this protects against Supabase database-only access, not a compromised website deployment, browser session or owner-controlled host. The host still checks owner identity on protected requests. The pairing route creates a short-lived invitation on the linked host, and the phone redeems it for its own restricted token.
 
 The site can run beside the Go API on a private tailnet host, or as a hosted public frontend with a deliberately configured Tailscale Funnel to the host. A hosted server process cannot reach a private tailnet address merely because the browser can. Only the `https://*.ts.net` endpoint registered for the owner is accepted for the hosted relay. The API remains authenticated in both deployments.
 
@@ -28,6 +28,8 @@ Only source changes can publish a journal post. There is no editor form, upload 
 
 ## Boundaries and verification
 
-The website does not store originals, decide whether a phone file may be deleted, or manufacture dashboard figures. Supabase holds account and node data; the host holds media, upload state, device-token hashes and measured storage state. A second-copy indicator depends on a separately mounted and verified backup target.
+The website does not store originals, decide whether a phone file may be deleted, or manufacture dashboard figures. Supabase holds account data and encrypted node-routing material; the host holds media, upload state, device-token hashes and measured storage state. A second-copy indicator depends on a separately mounted and verified backup target. The recovery key is not stored in the account database; the owner can display it again with `./fotoro endpoint-key` while the host database is available. Database-only access cannot decrypt the endpoint, but old plaintext may remain in Supabase backups or point-in-time history until their retention expires.
+
+Before deploying host-side endpoint encryption, apply `supabase/node_endpoint_encryption.sql` in the Supabase SQL editor. This clears the live table's legacy plaintext routes. Then update each Linux host, run `./fotoro nodesync`, and run `./fotoro endpoint-key`; enter the displayed key in Account settings on every browser that needs to connect. The website refuses node sync requests containing cleartext endpoint fields. The key is generated automatically on first sync and remains only in the local host database.
 
 `npm run typecheck` and `npm run build` check the public routes and client code. The `smoke:offload` script exercises resumable upload against a disposable image and leaves that image in the target library. Private dashboard behavior still needs an authenticated host and Tailscale route for end-to-end checks.

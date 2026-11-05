@@ -10,6 +10,7 @@ import {
 } from "@/lib/fotoro-server-data";
 import { checkServerStatus, type ConnectivityState } from "@/lib/fotoro-local";
 import type { NodePublic } from "@/lib/fotoro-local";
+import { decryptNodeEndpoint, unlockNodeVault, type EndpointEnvelope } from "@/lib/node-vault";
 
 interface ServerDataContextValue {
   token: string | null;
@@ -20,7 +21,10 @@ interface ServerDataContextValue {
   stats: ServerLibraryStats | null;
   devices: ServerDevice[];
   loading: boolean;
-  refresh: () => Promise<void>;
+  vaultConfigured: boolean;
+  vaultLocked: boolean;
+  unlockVault: (recoveryKey: string) => Promise<void>;
+  refresh: (force?: boolean) => Promise<void>;
 }
 
 const ServerDataContext = React.createContext<ServerDataContextValue>({
@@ -32,6 +36,9 @@ const ServerDataContext = React.createContext<ServerDataContextValue>({
   stats: null,
   devices: [],
   loading: true,
+  vaultConfigured: false,
+  vaultLocked: false,
+  unlockVault: async () => {},
   refresh: async () => {},
 });
 
@@ -44,11 +51,15 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
   const [stats, setStats] = React.useState<ServerLibraryStats | null>(null);
   const [devices, setDevices] = React.useState<ServerDevice[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [vaultConfigured, setVaultConfigured] = React.useState(false);
+  const [vaultLocked, setVaultLocked] = React.useState(false);
+  const endpointKeyRef = React.useRef<CryptoKey | null>(null);
   const nodeRef = React.useRef<NodePublic | null>(null);
   const lastNodeLookup = React.useRef(0);
   const refreshInFlight = React.useRef<Promise<void> | null>(null);
 
-  const refresh = React.useCallback((): Promise<void> => {
+  const refresh = React.useCallback((force = false): Promise<void> => {
+    if (force) lastNodeLookup.current = 0;
     if (refreshInFlight.current) return refreshInFlight.current;
     const run = async () => {
       const t = await getValidAccessToken();
@@ -65,7 +76,6 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
         return;
       }
 
-      void syncProxyCookie(t).catch(() => {});
       let nextNode = nodeRef.current;
       if (!nextNode || Date.now() - lastNodeLookup.current > 10 * 60_000) {
         try {
@@ -75,7 +85,58 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
           });
           if (!response.ok) throw new Error(`Device lookup failed (${response.status})`);
           const body = await response.json();
-          nextNode = body.node ?? null;
+          const encryptedNode = body.node as (NodePublic & { endpoint_envelope?: EndpointEnvelope | null }) | null;
+          const envelope = encryptedNode?.endpoint_envelope ?? null;
+          setVaultConfigured(Boolean(envelope));
+          nextNode = encryptedNode;
+          if (encryptedNode && !envelope) {
+            setVaultLocked(false);
+            const lockedNode = { ...encryptedNode, direct_url: null, private_url: null };
+            nodeRef.current = lockedNode;
+            lastNodeLookup.current = Date.now();
+            setNode(lockedNode);
+            setEndpoint(null);
+            setOnline("reconnecting");
+            setConnectError("Run ./fotoro nodesync on your Linux host to publish its encrypted route.");
+            setLoading(false);
+            return;
+          }
+          if (encryptedNode && envelope) {
+            if (!endpointKeyRef.current) {
+              setVaultLocked(true);
+              const lockedNode = { ...encryptedNode, direct_url: null, private_url: null };
+              nodeRef.current = lockedNode;
+              lastNodeLookup.current = Date.now();
+              setNode(lockedNode);
+              setEndpoint(null);
+              setOnline("reconnecting");
+              setConnectError("Enter this host's recovery key in Account settings to unlock its Tailscale route.");
+              setLoading(false);
+              return;
+            }
+            let details: Awaited<ReturnType<typeof decryptNodeEndpoint>>;
+            try {
+              details = await decryptNodeEndpoint(endpointKeyRef.current, envelope);
+            } catch (error) {
+              endpointKeyRef.current = null;
+              setVaultLocked(true);
+              const lockedNode = { ...encryptedNode, direct_url: null, private_url: null };
+              nodeRef.current = lockedNode;
+              lastNodeLookup.current = Date.now();
+              setNode(lockedNode);
+              setEndpoint(null);
+              setOnline("reconnecting");
+              setConnectError(error instanceof Error ? error.message : "The saved route could not be unlocked.");
+              setLoading(false);
+              return;
+            }
+            nextNode = {
+              ...encryptedNode,
+              direct_url: details.public_url ?? details.tailnet_url,
+              private_url: details.tailnet_url,
+            };
+            setVaultLocked(false);
+          }
           nodeRef.current = nextNode;
           lastNodeLookup.current = Date.now();
           setNode(nextNode);
@@ -100,6 +161,7 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
         setConnectError("No public Tailscale Funnel URL is registered. Run ./fotoro nodesync.");
         return;
       }
+      void syncProxyCookie(t, baseUrl).catch(() => {});
       const conn = await checkServerStatus(baseUrl, t);
       if (conn.state !== "online") {
         setOnline("reconnecting");
@@ -125,6 +187,19 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
     });
     return refreshInFlight.current;
   }, []);
+
+  const unlockVault = React.useCallback(async (recoveryKey: string) => {
+    const encryptedNode = nodeRef.current as (NodePublic & { endpoint_envelope?: EndpointEnvelope | null }) | null;
+    const envelope = encryptedNode?.endpoint_envelope;
+    if (!envelope) throw new Error("No encrypted server route is registered yet. Run ./fotoro nodesync on the Linux host.");
+    const key = await unlockNodeVault(recoveryKey);
+    await decryptNodeEndpoint(key, envelope);
+    endpointKeyRef.current = key;
+    nodeRef.current = null;
+    lastNodeLookup.current = 0;
+    setVaultLocked(false);
+    await refresh(true);
+  }, [refresh]);
 
   React.useEffect(() => {
     void refresh();
@@ -153,7 +228,8 @@ export function ServerDataProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <ServerDataContext.Provider
-      value={{ token, node, endpoint, online, connectError, stats, devices, loading, refresh }}
+      value={{ token, node, endpoint, online, connectError, stats, devices, loading,
+        vaultConfigured, vaultLocked, unlockVault, refresh }}
     >
       {children}
     </ServerDataContext.Provider>

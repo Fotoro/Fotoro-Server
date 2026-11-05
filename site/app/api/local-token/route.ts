@@ -2,6 +2,8 @@ import { SignJWT } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifySupabaseToken } from "@/lib/auth-verify";
+import { getRelayBaseUrlForUser } from "@/lib/fotoro-relay";
+import { FOTORO_ENDPOINT_COOKIE } from "@/lib/fotoro-proxy-cookie";
 
 const LOCAL_TOKEN_TTL = "5m";
 
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient();
     const { data: node, error: nodeError } = await supabase
       .from("nodes")
-      .select("public_url, tailnet_url, node_name, status")
+      .select("node_name, status")
       .eq("user_id", userId)
       .order("last_seen", { ascending: false })
       .limit(1)
@@ -51,7 +53,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const baseUrl = (node.public_url || node.tailnet_url || "").replace(/\/$/, "");
+    let baseUrl = "";
+    try {
+      baseUrl = await getRelayBaseUrlForUser(userId, request.cookies.get(FOTORO_ENDPOINT_COOKIE)?.value);
+    } catch {
+      baseUrl = "";
+    }
     if (!baseUrl) {
       return NextResponse.json(
         { error: "Server has no public URL yet — run ./fotoroctl start" },

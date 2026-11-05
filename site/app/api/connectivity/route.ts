@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySupabaseToken } from "@/lib/auth-verify";
 import { diagnoseRelayConnectivity, sanitizeRelayError } from "@/lib/fotoro-relay";
+import { FOTORO_ENDPOINT_COOKIE } from "@/lib/fotoro-proxy-cookie";
 
 /** Server-side connectivity check — browser never sees funnel URL or tailscale IP. */
 export async function GET(request: NextRequest) {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     const claims = await verifySupabaseToken(bearer);
     const userId = claims.sub as string;
 
-    const diagnostic = await diagnoseRelayConnectivity(userId, bearer);
+    const diagnostic = await diagnoseRelayConnectivity(userId, bearer, request.cookies.get(FOTORO_ENDPOINT_COOKIE)?.value);
     return NextResponse.json({
       online: diagnostic.online,
       photos: diagnostic.photos ?? 0,

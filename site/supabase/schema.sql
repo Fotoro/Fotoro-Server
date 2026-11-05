@@ -11,12 +11,14 @@ create table if not exists public.users (
 create table if not exists public.nodes (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references public.users(id) on delete cascade not null unique,
-    tailscale_ip text not null,
+    tailscale_ip text,
     tailnet_name text,
     magic_dns text,
     node_name text default 'fotoro-server',
     public_url text,
     tailnet_url text,
+    -- AES-GCM envelope produced by the linked Linux host. Never store routes in cleartext.
+    endpoint_ciphertext text,
     status text default 'offline' check (status in ('online', 'offline', 'error')),
     last_seen timestamptz default now(),
     created_at timestamptz default now(),

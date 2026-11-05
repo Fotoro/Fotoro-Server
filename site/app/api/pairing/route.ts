@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySupabaseToken } from "@/lib/auth-verify";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { relayFetch, sanitizeRelayError } from "@/lib/fotoro-relay";
-import { normalizeFotoroServerUrl } from "@/lib/fotoro-url";
+import { FOTORO_ENDPOINT_COOKIE } from "@/lib/fotoro-proxy-cookie";
+import { tailscaleFunnelOrigin } from "@/lib/fotoro-url";
 
 export async function POST(request: NextRequest) {
   const bearer = request.headers.get("authorization")?.replace(/^Bearer /i, "");
@@ -10,27 +10,17 @@ export async function POST(request: NextRequest) {
   try {
     const claims = await verifySupabaseToken(bearer);
     const userId = String(claims.sub ?? "");
-    const supabase = createAdminClient();
-    const { data: node, error } = await supabase.from("nodes")
-      .select("tailnet_url")
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (error) throw error;
-    if (!node?.tailnet_url) {
-      return NextResponse.json({ error: "Private Tailscale Serve URL is not registered" }, { status: 503 });
-    }
-    const serverUrl = normalizeFotoroServerUrl(node.tailnet_url);
-    const parsed = new URL(serverUrl);
-    if (parsed.protocol !== "https:" || !parsed.hostname.endsWith(".ts.net")) {
-      return NextResponse.json({ error: "Private Tailscale Serve URL is invalid" }, { status: 503 });
-    }
+    const endpoint = request.cookies.get(FOTORO_ENDPOINT_COOKIE)?.value;
+    if (!endpoint) return NextResponse.json({ error: "Unlock the endpoint vault first" }, { status: 423 });
+    const body = await request.json().catch(() => ({}));
+    const serverUrl = tailscaleFunnelOrigin(typeof body.server_url === "string" ? body.server_url : null) ?? endpoint;
     const upstream = await relayFetch(userId, bearer, "api/v1/pairing/sessions", "", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ server_url: serverUrl }),
-    });
-    const body = await upstream.json().catch(() => ({ error: "Pairing failed" }));
-    return NextResponse.json(body, { status: upstream.status, headers: { "Cache-Control": "no-store" } });
+    }, endpoint);
+    const responseBody = await upstream.json().catch(() => ({ error: "Pairing failed" }));
+    return NextResponse.json(responseBody, { status: upstream.status, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const detail = sanitizeRelayError(error instanceof Error ? error.message : "Pairing service unavailable");
     return NextResponse.json({ error: `Could not reach your running Fotoro server. ${detail}` }, {

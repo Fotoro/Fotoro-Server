@@ -11,6 +11,7 @@ const REFRESH_KEY = "fotoro_refresh_token";
 const USER_KEY = "fotoro_user";
 let refreshInFlight: Promise<string | null> | null = null;
 let cookieToken = "";
+let cookieEndpoint = "";
 let cookieSyncedAt = 0;
 
 export function getStoredUser(): FotoroUser | null {
@@ -51,6 +52,7 @@ export function clearAuth() {
   localStorage.removeItem(REFRESH_KEY);
   localStorage.removeItem(USER_KEY);
   cookieToken = "";
+  cookieEndpoint = "";
   cookieSyncedAt = 0;
 }
 
@@ -152,15 +154,17 @@ export async function getValidAccessToken(): Promise<string | null> {
 }
 
 /** Sync httpOnly cookie so <img> tags can load /api/fotoro thumbs without blob fetch. */
-export async function syncProxyCookie(token: string): Promise<void> {
-  if (cookieToken === token && Date.now() - cookieSyncedAt < 15 * 60_000) return;
+export async function syncProxyCookie(token: string, endpoint: string): Promise<void> {
+  if (cookieToken === token && cookieEndpoint === endpoint && Date.now() - cookieSyncedAt < 15 * 60_000) return;
   try {
     const response = await fetch("/api/fotoro/cookie", {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint }),
     });
     if (response.ok) {
       cookieToken = token;
+      cookieEndpoint = endpoint;
       cookieSyncedAt = Date.now();
     }
   } catch {
@@ -170,6 +174,7 @@ export async function syncProxyCookie(token: string): Promise<void> {
 
 export async function clearProxyCookie(): Promise<void> {
   cookieToken = "";
+  cookieEndpoint = "";
   cookieSyncedAt = 0;
   await fetch("/api/fotoro/cookie", { method: "DELETE" }).catch(() => {});
 }

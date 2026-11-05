@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySupabaseToken } from "@/lib/auth-verify";
-import { FOTORO_PROXY_COOKIE } from "@/lib/fotoro-proxy-cookie";
+import { FOTORO_ENDPOINT_COOKIE, FOTORO_PROXY_COOKIE } from "@/lib/fotoro-proxy-cookie";
 import { fetchRelayWithWakeRetry, getRelayBaseUrlForUser, sanitizeRelayError } from "@/lib/fotoro-relay";
 
 const MAX_PROXY_BODY_BYTES = 16 * 1024 * 1024 + 64 * 1024;
@@ -14,7 +14,7 @@ async function proxyToRelay(
 ) {
   let base: string;
   try {
-    base = await getRelayBaseUrlForUser(userId);
+    base = await getRelayBaseUrlForUser(userId, request.cookies.get(FOTORO_ENDPOINT_COOKIE)?.value);
   } catch (error) {
     const message = error instanceof Error ? error.message : "No server route configured";
     return NextResponse.json(
