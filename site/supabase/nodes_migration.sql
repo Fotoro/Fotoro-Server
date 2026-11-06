@@ -7,9 +7,5 @@ alter table public.nodes
 alter table public.nodes
   add constraint nodes_user_id_key unique (user_id);
 
--- Public / tailnet URLs pushed from the CLI after Tailscale setup
-alter table public.nodes
-  add column if not exists public_url text;
-
-alter table public.nodes
-  add column if not exists tailnet_url text;
+-- Endpoint routes are stored only as endpoint_ciphertext. Do not add
+-- public_url or tailnet_url columns; those values must remain encrypted.

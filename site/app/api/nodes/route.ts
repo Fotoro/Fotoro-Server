@@ -75,13 +75,8 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
     const row = {
       user_id: userId,
-      tailscale_ip: null,
-      tailnet_name: null,
-      magic_dns: null,
       node_name: nodeName || "fotoro-server",
       status,
-      public_url: null,
-      tailnet_url: null,
       endpoint_ciphertext: JSON.stringify(envelope),
       last_seen: now,
       updated_at: now,

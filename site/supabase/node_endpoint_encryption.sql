@@ -1,16 +1,20 @@
 -- Apply before deploying the encrypted endpoint-sync client.
--- Run `./fotoro nodesync` on each host after this migration. That writes the
--- authenticated ciphertext generated locally by the host.
+-- The migration is safe to re-run. It removes legacy route columns entirely,
+-- so the database schema cannot accept new plaintext endpoint values.
 alter table public.nodes
-  alter column tailscale_ip drop not null,
   add column if not exists endpoint_ciphertext text;
 
--- Remove existing cleartext routes from the live table. Supabase backups and
--- point-in-time history may retain older values until their retention expires.
-update public.nodes
-set tailscale_ip = null,
-    tailnet_name = null,
-    magic_dns = null,
-    public_url = null,
-    tailnet_url = null,
-    updated_at = now();
+alter table public.nodes
+  drop column if exists tailscale_ip,
+  drop column if exists tailnet_name,
+  drop column if exists magic_dns,
+  drop column if exists public_url,
+  drop column if exists tailnet_url;
+
+-- Node writes go through the authenticated website API using its server key.
+-- Ordinary account sessions may read their own envelope but cannot replace it
+-- with arbitrary cleartext through the Supabase REST endpoint.
+drop policy if exists "Users can insert own nodes" on public.nodes;
+drop policy if exists "Users can update own nodes" on public.nodes;
+
+-- Backups and point-in-time history may retain removed values until expiry.

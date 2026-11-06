@@ -11,13 +11,8 @@ create table if not exists public.users (
 create table if not exists public.nodes (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references public.users(id) on delete cascade not null unique,
-    tailscale_ip text,
-    tailnet_name text,
-    magic_dns text,
     node_name text default 'fotoro-server',
-    public_url text,
-    tailnet_url text,
-    -- AES-GCM envelope produced by the linked Linux host. Never store routes in cleartext.
+    -- AES-GCM envelope produced by the linked Linux host. Route fields are not stored in cleartext.
     endpoint_ciphertext text,
     status text default 'offline' check (status in ('online', 'offline', 'error')),
     last_seen timestamptz default now(),
@@ -38,14 +33,6 @@ create policy "Users can update own profile"
 
 create policy "Users can read own nodes"
     on public.nodes for select
-    using (auth.uid() = user_id);
-
-create policy "Users can insert own nodes"
-    on public.nodes for insert
-    with check (auth.uid() = user_id);
-
-create policy "Users can update own nodes"
-    on public.nodes for update
     using (auth.uid() = user_id);
 
 -- Function to update node heartbeat
