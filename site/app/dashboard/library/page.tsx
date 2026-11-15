@@ -7,6 +7,7 @@ import { DashboardTopbar } from "@/components/dashboard/topbar";
 import { ConnectivityBadge } from "@/components/dashboard/connectivity-badge";
 import { PhotoGallery, type PhotoGalleryHandle } from "@/components/dashboard/photo-gallery";
 import { UploadZone } from "@/components/dashboard/upload-zone";
+import { CalendarCard } from "@/components/dashboard/calendar-card";
 import {
   clearAuth,
   clearProxyCookie,
@@ -77,14 +78,17 @@ export default function LibraryPage() {
 
         <div className="grid min-h-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <PhotoGallery ref={galleryRef} />
-          {(online === "online" || online === "reconnecting") && node ? (
-            <UploadZone
-              onUploaded={() => {
-                void refresh();
-                galleryRef.current?.refresh();
-              }}
-            />
-          ) : null}
+          <div className="space-y-6">
+            {(online === "online" || online === "reconnecting") && node ? (
+              <UploadZone
+                onUploaded={() => {
+                  void refresh();
+                  galleryRef.current?.refresh();
+                }}
+              />
+            ) : null}
+            <CalendarCard />
+          </div>
         </div>
       </motion.main>
     </>

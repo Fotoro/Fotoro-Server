@@ -11,6 +11,7 @@ import { DeviceList } from "@/components/dashboard/device-list";
 import { ServerNodeCard } from "@/components/dashboard/server-node";
 import { UploadZone } from "@/components/dashboard/upload-zone";
 import { QrPair } from "@/components/dashboard/qr-pair";
+import { OnThisDayCard } from "@/components/dashboard/on-this-day";
 import { ConnectivityBadge } from "@/components/dashboard/connectivity-badge";
 import { useServerData } from "@/components/dashboard/server-data-provider";
 import { Button } from "@/components/ui/button";
@@ -145,7 +146,10 @@ export default function DashboardPage() {
             ) : null}
             <DeviceList />
           </div>
-          <QrPair />
+          <div className="space-y-6">
+            <QrPair />
+            <OnThisDayCard />
+          </div>
         </div>
       </motion.main>
     </>

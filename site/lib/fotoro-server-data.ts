@@ -43,6 +43,70 @@ export interface PhotosPage {
   count: number;
 }
 
+export interface BackupStatus {
+  configured: boolean;
+  available: boolean;
+  error?: string;
+  unverified_primary: number;
+  missing_primary: number;
+  corrupt_primary: number;
+  pending: number;
+  verified: number;
+  failed: number;
+}
+
+export interface TierStats {
+  hot_assets: number;
+  hot_bytes: number;
+  warm_assets: number;
+  warm_bytes: number;
+  cold_assets: number;
+  cold_bytes: number;
+  archive_bytes: number;
+  saved_bytes: number;
+  packs: number;
+  pack_bytes: number;
+  rehydrated_cache_bytes: number;
+  primary_free_bytes: number;
+  primary_total_bytes: number;
+}
+
+export interface TierRunResult {
+  demoted: string[] | null;
+  promoted: string[] | null;
+  packed: string[] | null;
+  errors?: string[] | null;
+  cache_trimmed?: boolean;
+}
+
+export interface EmbedStatus {
+  model: string;
+  dim: number;
+  total_images: number;
+  embedded: number;
+  pending: number;
+  index_vectors: number;
+  backend_healthy: boolean;
+}
+
+export interface EmbedBackfillResult {
+  embedded: number;
+  skipped: number;
+  pending: number;
+}
+
+export interface CalendarYearNode {
+  year: number;
+  months: Record<string, number>;
+  days: Record<string, number>;
+  total: number;
+}
+
+export interface CalendarResponse {
+  years: Record<string, CalendarYearNode>;
+  missing_capture_dates: number;
+}
+
 interface ApiImageRow {
   hash: string;
   caption: string;
@@ -116,6 +180,20 @@ async function proxyGet<T>(path: string, token: string, baseUrl: string | null =
   const res = await fetch(baseUrl ? `${baseUrl}/${cleanPath}` : `/api/fotoro/${cleanPath}`, {
     headers: authHeaders(token),
     signal: AbortSignal.timeout(8_000),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error((data as { error?: string }).error ?? `Request failed (${res.status})`);
+  }
+  return data as T;
+}
+
+async function proxyPost<T>(path: string, token: string, baseUrl: string | null = null): Promise<T> {
+  const cleanPath = path.replace(/^\//, "");
+  const res = await fetch(baseUrl ? `${baseUrl}/${cleanPath}` : `/api/fotoro/${cleanPath}`, {
+    method: "POST",
+    headers: authHeaders(token),
+    signal: AbortSignal.timeout(120_000),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -211,6 +289,64 @@ export async function fetchLibraryStats(token: string, baseUrl: string | null = 
 export async function fetchServerDevices(token: string, baseUrl: string | null = null): Promise<ServerDevice[]> {
   const data = await proxyGet<{ devices?: ServerDevice[] }>("devices", token, baseUrl);
   return Array.isArray(data.devices) ? data.devices : [];
+}
+
+export async function fetchBackupStatus(token: string, baseUrl: string | null = null): Promise<BackupStatus | null> {
+  try {
+    return await proxyGet<BackupStatus>("api/v1/storage", token, baseUrl);
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchTierStats(token: string, baseUrl: string | null = null): Promise<TierStats | null> {
+  try {
+    return await proxyGet<TierStats>("api/v1/storage/tiers", token, baseUrl);
+  } catch {
+    return null;
+  }
+}
+
+export async function runTierPass(token: string, baseUrl: string | null = null): Promise<TierRunResult> {
+  return proxyPost<TierRunResult>("api/v1/storage/tier/run", token, baseUrl);
+}
+
+export async function snapshotCatalogue(token: string, baseUrl: string | null = null): Promise<{ snapshot: string }> {
+  return proxyPost<{ snapshot: string }>("api/v1/storage/catalogue-snapshot", token, baseUrl);
+}
+
+export async function verifyBackupCopies(token: string, baseUrl: string | null = null): Promise<{ checked: number; storage?: BackupStatus }> {
+  return proxyPost<{ checked: number; storage?: BackupStatus }>("api/v1/storage/verify", token, baseUrl);
+}
+
+export async function fetchEmbedStatus(token: string, baseUrl: string | null = null): Promise<EmbedStatus | null> {
+  try {
+    return await proxyGet<EmbedStatus>("api/v1/embed/status", token, baseUrl);
+  } catch {
+    return null;
+  }
+}
+
+export async function runEmbedBackfill(token: string, baseUrl: string | null = null): Promise<EmbedBackfillResult> {
+  return proxyPost<EmbedBackfillResult>("api/v1/embed/backfill", token, baseUrl);
+}
+
+export async function fetchOnThisDay(token: string, baseUrl: string | null = null, perYear = 3): Promise<GalleryPhoto[]> {
+  const data = await proxyGet<{ media?: ApiMediaRow[] }>(`api/v1/memories/on-this-day?per_year=${perYear}`, token, baseUrl);
+  return Array.isArray(data.media) ? data.media.map(mapApiMedia) : [];
+}
+
+export async function fetchCalendar(token: string, baseUrl: string | null = null): Promise<CalendarResponse | null> {
+  try {
+    return await proxyGet<CalendarResponse>("api/v1/calendar", token, baseUrl);
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchCalendarDay(token: string, date: string, baseUrl: string | null = null): Promise<GalleryPhoto[]> {
+  const data = await proxyGet<{ media?: ApiMediaRow[] }>(`api/v1/calendar/day?date=${encodeURIComponent(date)}&limit=200`, token, baseUrl);
+  return Array.isArray(data.media) ? data.media.map(mapApiMedia) : [];
 }
 
 /** Paginated gallery from the canonical media catalogue. */

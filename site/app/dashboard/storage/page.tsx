@@ -5,19 +5,17 @@ import { useRouter } from "next/navigation";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import { clearAuth, clearProxyCookie, getStoredUser, type FotoroUser } from "@/lib/fotoro-session";
 import { useServerData } from "@/components/dashboard/server-data-provider";
-import { formatBytes, formatCount } from "@/lib/fotoro-server-data";
-
-type BackupStatus = {
-  configured: boolean;
-  available: boolean;
-  error?: string;
-  unverified_primary: number;
-  missing_primary: number;
-  corrupt_primary: number;
-  pending: number;
-  verified: number;
-  failed: number;
-};
+import {
+  fetchBackupStatus,
+  fetchTierStats,
+  formatBytes,
+  formatCount,
+  runTierPass,
+  snapshotCatalogue,
+  verifyBackupCopies,
+  type BackupStatus,
+  type TierStats,
+} from "@/lib/fotoro-server-data";
 
 export default function StoragePage() {
   const router = useRouter();
@@ -25,19 +23,28 @@ export default function StoragePage() {
   const { stats, online, token, endpoint } = useServerData();
   const [backup, setBackup] = React.useState<BackupStatus | null>(null);
   const [syncing, setSyncing] = React.useState(false);
+  const [verifying, setVerifying] = React.useState(false);
+  const [tiers, setTiers] = React.useState<TierStats | null>(null);
+  const [tierAction, setTierAction] = React.useState<"run" | "snapshot" | null>(null);
+  const [tierNote, setTierNote] = React.useState<string | null>(null);
   const live = online === "online" || online === "reconnecting" ? stats : null;
 
   const refreshBackup = React.useCallback(async () => {
     if (!token || online !== "online") return;
-    const res = await fetch(endpoint ? `${endpoint}/api/v1/storage` : "/api/fotoro/api/v1/storage", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) setBackup((await res.json()) as BackupStatus);
+    const status = await fetchBackupStatus(token, endpoint);
+    if (status) setBackup(status);
+  }, [token, endpoint, online]);
+
+  const refreshTiers = React.useCallback(async () => {
+    if (!token || online !== "online") return;
+    const status = await fetchTierStats(token, endpoint);
+    if (status) setTiers(status);
   }, [token, endpoint, online]);
 
   React.useEffect(() => {
     void refreshBackup();
-  }, [refreshBackup]);
+    void refreshTiers();
+  }, [refreshBackup, refreshTiers]);
 
   async function syncBackup() {
     if (!token) return;
@@ -50,6 +57,50 @@ export default function StoragePage() {
       await refreshBackup();
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function verifyCopies() {
+    if (!token) return;
+    setVerifying(true);
+    try {
+      const res = await verifyBackupCopies(token, endpoint);
+      if (res.storage) setBackup(res.storage);
+      else await refreshBackup();
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function runTierMaintenance() {
+    if (!token) return;
+    setTierAction("run");
+    setTierNote(null);
+    try {
+      const res = await runTierPass(token, endpoint);
+      const errors = res.errors?.length ?? 0;
+      setTierNote(
+        `Tier pass finished: ${res.demoted?.length ?? 0} demoted, ${res.promoted?.length ?? 0} promoted, ${res.packed?.length ?? 0} packed${errors ? `, ${errors} errors` : ""}.`
+      );
+      await Promise.all([refreshTiers(), refreshBackup()]);
+    } catch (error) {
+      setTierNote(error instanceof Error ? error.message : "Tier pass failed");
+    } finally {
+      setTierAction(null);
+    }
+  }
+
+  async function snapshotNow() {
+    if (!token) return;
+    setTierAction("snapshot");
+    setTierNote(null);
+    try {
+      const res = await snapshotCatalogue(token, endpoint);
+      setTierNote(res.snapshot ? `Catalogue snapshot saved to ${res.snapshot}.` : "Catalogue snapshot saved.");
+    } catch (error) {
+      setTierNote(error instanceof Error ? error.message : "Snapshot failed");
+    } finally {
+      setTierAction(null);
     }
   }
 
@@ -69,6 +120,21 @@ export default function StoragePage() {
     { label: "Primary disk capacity", value: live && live.disk_total_bytes ? formatBytes(live.disk_total_bytes) : "—" },
     { label: "Items needing attention", value: live ? formatCount(live.photos_failed) : "—" },
   ];
+
+  const tierStoredBytes = tiers ? tiers.hot_bytes + tiers.archive_bytes + tiers.pack_bytes : 0;
+  const tierSegments = [
+    { label: "Hot", bytes: tiers?.hot_bytes ?? 0, cls: "bg-[hsl(var(--brand))]" },
+    { label: "Warm", bytes: tiers?.archive_bytes ?? 0, cls: "bg-foreground/50" },
+    { label: "Cold", bytes: tiers?.pack_bytes ?? 0, cls: "bg-muted-foreground/40" },
+  ];
+  const tierRows = tiers ? [
+    { label: "Hot / originals on primary", value: `${formatCount(tiers.hot_assets)} items · ${formatBytes(tiers.hot_bytes)}` },
+    { label: "Warm / compressed archives", value: `${formatCount(tiers.warm_assets)} items · ${formatBytes(tiers.archive_bytes)} stored` },
+    { label: "Cold / sealed packs", value: `${formatCount(tiers.cold_assets)} items in ${formatCount(tiers.packs)} packs · ${formatBytes(tiers.pack_bytes)}` },
+    { label: "Space saved by tiering", value: formatBytes(tiers.saved_bytes) },
+    { label: "Decode cache (rehydrated)", value: formatBytes(tiers.rehydrated_cache_bytes) },
+    { label: "Primary disk free", value: `${formatBytes(tiers.primary_free_bytes)} of ${formatBytes(tiers.primary_total_bytes)}` },
+  ] : [];
 
   return (
     <>
@@ -99,10 +165,16 @@ export default function StoragePage() {
         <div className="matrix-panel mt-8 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-medium">Automatic backup</h2>
-            <button type="button" onClick={() => void syncBackup()} disabled={!backup?.available || syncing || online !== "online"}
-              className="rounded-md border border-border px-3 py-1.5 text-xs disabled:opacity-50">
-              {syncing ? "Checking…" : "Back up pending now"}
-            </button>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => void verifyCopies()} disabled={!backup?.available || verifying || online !== "online"}
+                className="rounded-md border border-border px-3 py-1.5 text-xs disabled:opacity-50">
+                {verifying ? "Verifying…" : "Verify copies"}
+              </button>
+              <button type="button" onClick={() => void syncBackup()} disabled={!backup?.available || syncing || online !== "online"}
+                className="rounded-md border border-border px-3 py-1.5 text-xs disabled:opacity-50">
+                {syncing ? "Checking…" : "Back up pending now"}
+              </button>
+            </div>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
             {!backup ? "Checking storage…" : backup.available
@@ -115,6 +187,52 @@ export default function StoragePage() {
               {backup.missing_primary} originals unavailable; {backup.corrupt_primary} failed checksum verification.
             </p>
           ) : null}
+        </div>
+        <div className="matrix-panel mt-8 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-medium">Storage tiers</h2>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => void runTierMaintenance()} disabled={!tiers || tierAction !== null || online !== "online"}
+                className="rounded-md border border-border px-3 py-1.5 text-xs disabled:opacity-50">
+                {tierAction === "run" ? "Running…" : "Run tier pass"}
+              </button>
+              <button type="button" onClick={() => void snapshotNow()} disabled={tierAction !== null || online !== "online"}
+                className="rounded-md border border-border px-3 py-1.5 text-xs disabled:opacity-50">
+                {tierAction === "snapshot" ? "Saving…" : "Snapshot catalogue"}
+              </button>
+            </div>
+          </div>
+          {!tiers ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {online === "online" ? "Reading tier stats…" : "Connect your server for tier stats."}
+            </p>
+          ) : (
+            <>
+              {tierStoredBytes > 0 ? (
+                <>
+                  <div className="mt-4 flex h-2 overflow-hidden rounded-full bg-border">
+                    {tierSegments.filter((seg) => seg.bytes > 0).map((seg) => (
+                      <div key={seg.label} className={seg.cls} style={{ width: `${(seg.bytes / tierStoredBytes) * 100}%` }} />
+                    ))}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10px] text-muted-foreground">
+                    {tierSegments.map((seg) => (
+                      <span key={seg.label}>{seg.label} {formatBytes(seg.bytes)}</span>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+              <dl className="mt-4 divide-y divide-border">
+                {tierRows.map((r) => (
+                  <div key={r.label} className="flex justify-between gap-4 py-3 text-sm">
+                    <dt className="text-muted-foreground">{r.label}</dt>
+                    <dd className="text-right font-mono text-xs">{r.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          )}
+          {tierNote ? <p className="mt-3 break-all font-mono text-xs text-muted-foreground">{tierNote}</p> : null}
         </div>
       </main>
     </>
