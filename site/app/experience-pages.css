@@ -1,5 +1,5 @@
 /* The supporting product pages share Fotoro's editorial type, paper and grid. */
-.features-shell,.about-shell,.docs-shell,.how-shell,.download-shell { --background:34 30% 95%;--foreground:30 13% 9%;--card:0 0% 100%;--card-foreground:30 13% 9%;--popover:0 0% 100%;--popover-foreground:30 13% 9%;--muted:30 14% 89%;--muted-foreground:31 9% 39%;--border:30 12% 78%;--input:30 12% 78%;--accent:30 15% 87%;--accent-foreground:30 13% 9%;--brand:224 78% 48%;color-scheme:light; }
+.features-shell,.about-shell,.docs-shell,.how-shell,.download-shell { --background:34 30% 95%;--foreground:30 13% 9%;--primary:30 13% 9%;--primary-foreground:34 30% 95%;--secondary:30 14% 89%;--secondary-foreground:30 13% 9%;--destructive:9 64% 43%;--destructive-foreground:0 0% 100%;--card:0 0% 100%;--card-foreground:30 13% 9%;--popover:0 0% 100%;--popover-foreground:30 13% 9%;--muted:30 14% 89%;--muted-foreground:31 9% 39%;--border:30 12% 78%;--input:30 12% 78%;--accent:30 15% 87%;--accent-foreground:30 13% 9%;--ring:224 78% 48%;--brand:224 78% 48%;color-scheme:light;color:#171313; }
 .features-shell,.about-shell,.docs-shell,.how-shell,.download-shell { background:#EAE4DC; }
 
 .features-page { padding-bottom:75px;overflow:hidden;background:#EAE4DC;color:#171313; }
