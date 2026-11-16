@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/site/page-shell";
+import { Markdown } from "@/components/markdown";
 import { getPost, posts } from "@/content/blog";
 import { SITE } from "@/lib/constants";
 import { publicMetadata } from "@/lib/seo";
@@ -54,11 +55,8 @@ export default async function BlogPostPage({ params }: BlogParams) {
       <h1 className="font-display mt-5 text-balance text-6xl leading-[.95] sm:text-8xl">{post.title}</h1>
       <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">{post.summary}</p>
     </header>
-    <div className="mx-auto max-w-2xl space-y-16 pt-14">
-      {post.sections.map((section) => <section key={section.heading}>
-        <h2 className="font-display text-4xl">{section.heading}</h2>
-        <div className="mt-4 space-y-4 text-base leading-8 text-muted-foreground">{section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
-      </section>)}
+    <div className="mx-auto max-w-2xl pt-14">
+      <Markdown source={post.body} />
     </div>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
   </article></PageShell>;
